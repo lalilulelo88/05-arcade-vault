@@ -1,6 +1,6 @@
 # SPEC 05 — Asteroids jugable en la plataforma
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 > **Depende de:** SPEC 01, SPEC 04 (solo como contexto; no usa Supabase)
 > **Fecha:** 2026-10-06
 > **Objetivo:** Portar el juego `references/started-games/02-asteroids/` a un motor TypeScript y hacerlo jugable en `/jugar/asteroids`, alimentando el HUD y el guardado de puntaje de la plataforma con datos reales.
