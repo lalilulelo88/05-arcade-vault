@@ -3,7 +3,7 @@ import { ContactForm } from "@/components/about/contact-form";
 import { HighlightIcon, type HighlightIconKind } from "@/components/about/highlight-icon";
 import { RevealObserver } from "@/components/home/reveal-observer";
 
-export const metadata: Metadata = { title: "Acerca de · Arcade Vault" };
+export const metadata: Metadata = { title: "Acerca de" };
 
 const HIGHLIGHTS: { icon: HighlightIconKind; text: string; color: string }[] = [
   { icon: "HEART", text: "HECHO CON ❤️ PARA JUGADORES", color: "magenta" },
