@@ -16,4 +16,3 @@ npx skills@latest add Klerith/fernando-skills
 
 ```
 
-### HOLA MUNDO
