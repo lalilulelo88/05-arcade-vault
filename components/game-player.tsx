@@ -1,16 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ENGINES } from "@/lib/engines";
+import type { EngineHandle, GameEngine } from "@/lib/engines/types";
 import type { Game } from "@/lib/games";
 import { useSession } from "./session-provider";
 
 const LIVES = 3;
+const CANVAS_STYLE = { position: "absolute", inset: 0, width: "100%", height: "100%" } as const;
 
 export function GamePlayer({ game }: { game: Game }) {
   const { user } = useSession();
   const [score, setScore] = useState(0);
   const [level, setLevel] = useState(1);
+  const [lives, setLives] = useState(LIVES);
+  const [run, setRun] = useState(0);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const engineRef = useRef<EngineHandle | null>(null);
+  const startEngine = ENGINES[game.id] as GameEngine | undefined;
   const [paused, setPaused] = useState(false);
   const [over, setOver] = useState(false);
   const [edited, setEdited] = useState<string | null>(null);
@@ -19,22 +27,53 @@ export function GamePlayer({ game }: { game: Game }) {
   const name = edited ?? user?.name ?? "INVITADO";
 
   useEffect(() => {
-    if (over || paused) return;
+    if (!startEngine || !canvasRef.current) return;
+    const handle = startEngine(canvasRef.current, {
+      onScore: setScore,
+      onLives: setLives,
+      onLevel: setLevel,
+      onGameOver: (final) => {
+        setScore(final);
+        setOver(true);
+      },
+    });
+    engineRef.current = handle;
+    return () => {
+      handle.destroy();
+      engineRef.current = null;
+    };
+  }, [startEngine, run]);
+
+  useEffect(() => {
+    if (startEngine || over || paused) return;
     const t = setInterval(() => setScore((s) => s + Math.floor(10 + Math.random() * 90)), 220);
     return () => clearInterval(t);
-  }, [over, paused]);
+  }, [startEngine, over, paused]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- comportamiento heredado del template
-    if (score > 0 && score % 2500 < 100) setLevel((l) => l + 1);
-  }, [score]);
+    if (!startEngine && score > 0 && score % 2500 < 100) setLevel((l) => l + 1);
+  }, [startEngine, score]);
 
   const restart = () => {
     setScore(0);
     setLevel(1);
+    setLives(LIVES);
+    setRun((r) => r + 1);
     setPaused(false);
     setOver(false);
     setSaved(false);
+  };
+
+  const togglePause = () => {
+    if (paused) engineRef.current?.resume();
+    else engineRef.current?.pause();
+    setPaused(!paused);
+  };
+
+  const finish = () => {
+    if (engineRef.current) engineRef.current.end();
+    else setOver(true);
   };
 
   const save = () => {
@@ -52,25 +91,29 @@ export function GamePlayer({ game }: { game: Game }) {
         <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
           <div className="hud-stat"><div className="l">Jugador</div><div className="v" style={{ color: "var(--ink)" }}>{name}</div></div>
           <div className="hud-stat"><div className="l">Puntuación</div><div className="v">{score.toLocaleString("es-ES")}</div></div>
-          <div className="hud-stat lives"><div className="l">Vidas</div><div className="v">{"♥ ".repeat(LIVES).trim()}</div></div>
+          <div className="hud-stat lives"><div className="l">Vidas</div><div className="v">{"♥ ".repeat(lives).trim()}</div></div>
           <div className="hud-stat level"><div className="l">Nivel</div><div className="v">{String(level).padStart(2, "0")}</div></div>
         </div>
         <div className="hud-actions">
-          <button className="btn yellow" onClick={() => setPaused((p) => !p)}>{paused ? "REANUDAR" : "PAUSA"}</button>
-          <button className="btn magenta" onClick={() => setOver(true)}>FIN</button>
+          <button className="btn yellow" onClick={togglePause}>{paused ? "REANUDAR" : "PAUSA"}</button>
+          <button className="btn magenta" onClick={finish}>FIN</button>
           <Link className="btn ghost" href={`/juegos/${game.id}`}>SALIR</Link>
         </div>
       </div>
 
       <div className="crt">
         <div className="crt-screen">
-          <div className="game-arena">
-            <div className="grid-floor"></div>
-            <div className="enemy e1"></div>
-            <div className="enemy e2"></div>
-            <div className="enemy e3"></div>
-            <div className="player-ship"></div>
-          </div>
+          {startEngine ? (
+            <canvas key={run} ref={canvasRef} width={800} height={600} style={CANVAS_STYLE} />
+          ) : (
+            <div className="game-arena">
+              <div className="grid-floor"></div>
+              <div className="enemy e1"></div>
+              <div className="enemy e2"></div>
+              <div className="enemy e3"></div>
+              <div className="player-ship"></div>
+            </div>
+          )}
           {paused && (
             <div className="crt-content" style={{ background: "rgba(0,0,0,0.6)", zIndex: 5 }}>
               <div>
