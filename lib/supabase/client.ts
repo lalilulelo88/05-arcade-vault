@@ -1,4 +1,5 @@
 import { createBrowserClient } from "@supabase/ssr";
+import type { Database } from "@/lib/supabase/database.types";
 // Las referencias a process.env deben ser literales para que Next las inyecte en el bundle del cliente.
 export function supabaseEnv() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -13,5 +14,5 @@ export function supabaseEnv() {
 }
 export function createClient() {
   const { url, key } = supabaseEnv();
-  return createBrowserClient(url, key);
+  return createBrowserClient<Database>(url, key);
 }
