@@ -8,14 +8,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Arcade Vault: plataforma para jugar online y competir por la mayor cantidad de puntos. Se desarrolla con Spec Driven Design (comandos `/spec` y `/spec-impl`, skills de [Klerith/fernando-skills](https://github.com/Klerith/fernando-skills)). El código está aún en el scaffold inicial de Create Next App.
 
-## Comandos
+## Skills
 
-```bash
-npm run dev     # servidor de desarrollo (http://localhost:3000)
-npm run build   # build de producción
-npm run lint    # eslint (flat config, eslint.config.mjs)
-npx tsc --noEmit  # chequeo de tipos
-```
+Usa siempre /frontend-desing para diseñar interfaces de usuarios
 
 No hay framework de tests configurado.
 
