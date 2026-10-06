@@ -21,11 +21,19 @@ export const startAsteroids: GameEngine = (
   // ── Input ───────────────────────────────────────────────────────────────────
   const keys: Record<string, boolean> = {};
   const justPressed: Record<string, boolean> = {};
+  // Evita el scroll de la página (y el clic en botones enfocados) sin tocar los campos de texto
+  const GAME_KEYS = ["ArrowLeft", "ArrowUp", "ArrowRight", "Space"];
+  const blocksPage = (e: KeyboardEvent) =>
+    GAME_KEYS.includes(e.code) &&
+    !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement);
+
   const onKeyDown = (e: KeyboardEvent) => {
+    if (blocksPage(e)) e.preventDefault();
     if (!keys[e.code]) justPressed[e.code] = true;
     keys[e.code] = true;
   };
   const onKeyUp = (e: KeyboardEvent) => {
+    if (blocksPage(e)) e.preventDefault();
     keys[e.code] = false;
   };
   window.addEventListener("keydown", onKeyDown);
