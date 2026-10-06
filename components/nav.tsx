@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useSession } from "./session-provider";
 
-type Section = "inicio" | "biblioteca" | "salon" | "auth";
+type Section = "inicio" | "biblioteca" | "salon" | "about" | "auth";
 
 export function Nav() {
   const [open, setOpen] = useState(false);
@@ -16,6 +16,7 @@ export function Nav() {
     switch (name) {
       case "inicio": return pathname === "/";
       case "salon": return pathname.startsWith("/salon");
+      case "about": return pathname.startsWith("/about");
       case "auth": return pathname.startsWith("/auth");
       default: return pathname.startsWith("/games") || pathname.startsWith("/juegos") || pathname.startsWith("/jugar");
     }
@@ -36,6 +37,7 @@ export function Nav() {
           <Link className={cls("inicio")} href="/">Inicio</Link>
           <Link className={cls("biblioteca")} href="/games">Biblioteca</Link>
           <Link className={cls("salon")} href="/salon">Salón de la Fama</Link>
+          <Link className={cls("about")} href="/about">Acerca de</Link>
         </div>
         <div className="spacer"></div>
         <div className="coin-counter">
@@ -56,6 +58,7 @@ export function Nav() {
         <Link className={cls("inicio")} href="/" onClick={close}>Inicio</Link>
         <Link className={cls("biblioteca")} href="/games" onClick={close}>Biblioteca</Link>
         <Link className={cls("salon")} href="/salon" onClick={close}>Salón de la Fama</Link>
+        <Link className={cls("about")} href="/about" onClick={close}>Acerca de</Link>
         <Link className={cls("auth")} href="/auth" onClick={close}>{user ? "Cuenta" : "Iniciar Sesión"}</Link>
         <div style={{ flex: 1 }}></div>
         <div className="pixel" style={{ fontSize: 9, color: "var(--ink-faint)", letterSpacing: "0.16em" }}>CRÉDITOS · 03</div>
