@@ -1,6 +1,5 @@
 export type Category = "ARCADE" | "PUZZLE" | "SHOOTER" | "VERSUS";
 export type Accent = "cyan" | "magenta" | "yellow" | "green";
-
 export type Game = {
   id: string;
   title: string;
@@ -12,9 +11,12 @@ export type Game = {
   best: number;
   plays: string;
 };
-
-export type ScoreRow = { rank: number; name: string; score: number; date: string };
-
+export type ScoreRow = {
+  rank: number;
+  name: string;
+  score: number;
+  date: string;
+};
 export const GAMES: Game[] = [
   {
     id: "bloque-buster",
@@ -83,6 +85,17 @@ export const GAMES: Game[] = [
     plays: "15.6K",
   },
   {
+    id: "asteroids",
+    title: "ASTEROIDS",
+    short: "Pulveriza asteroides en el vacío del espacio.",
+    long: "Pilota tu nave con inercia en un campo de asteroides. Dispara para fragmentarlos en rocas cada vez más pequeñas y recoge el power-up de disparo triple para limpiar el sector. Sin OVNIs: solo tú y las rocas.",
+    cat: "SHOOTER",
+    cover: "cover-rocas",
+    color: "cyan",
+    best: 0,
+    plays: "0",
+  },
+  {
     id: "ranaria",
     title: "RANARIA",
     short: "Cruza la autopista de pixeles.",
@@ -105,15 +118,33 @@ export const GAMES: Game[] = [
     plays: "4.2K",
   },
 ];
-
-export const CATS: ("TODOS" | Category)[] = ["TODOS", "ARCADE", "PUZZLE", "SHOOTER", "VERSUS"];
-
-const PLAYERS = [
-  "PX_KAI", "NEONFOX", "Z3R0COOL", "M00NRYU", "VAULT_07", "GLITCHA",
-  "ATARI_KID", "CYBER_LU", "MAGENTA88", "SCANLINE", "BIT_LORD", "ARKADYA",
-  "DROID_X", "RGB_QUEEN", "PIXEL_DAD", "RETROVIRA", "VECTORX", "JOY_STK",
+export const CATS: ("TODOS" | Category)[] = [
+  "TODOS",
+  "ARCADE",
+  "PUZZLE",
+  "SHOOTER",
+  "VERSUS",
 ];
-
+const PLAYERS = [
+  "PX_KAI",
+  "NEONFOX",
+  "Z3R0COOL",
+  "M00NRYU",
+  "VAULT_07",
+  "GLITCHA",
+  "ATARI_KID",
+  "CYBER_LU",
+  "MAGENTA88",
+  "SCANLINE",
+  "BIT_LORD",
+  "ARKADYA",
+  "DROID_X",
+  "RGB_QUEEN",
+  "PIXEL_DAD",
+  "RETROVIRA",
+  "VECTORX",
+  "JOY_STK",
+];
 // Determinista: mismo seed, mismas filas (evita errores de hidratación).
 export function seededScores(seed: number, count = 12): ScoreRow[] {
   let s = seed;
@@ -130,7 +161,14 @@ export function seededScores(seed: number, count = 12): ScoreRow[] {
     const score = base - i * Math.floor(2000 + rand() * 4000);
     const day = String(1 + Math.floor(rand() * 28)).padStart(2, "0");
     const mon = String(1 + Math.floor(rand() * 12)).padStart(2, "0");
-    rows.push({ rank: i + 1, name, score: Math.max(score, 1000), date: `${day}/${mon}/2026` });
+    rows.push({
+      rank: i + 1,
+      name,
+      score: Math.max(score, 1000),
+      date: `${day}/${mon}/2026`,
+    });
   }
-  return rows.sort((a, b) => b.score - a.score).map((r, i) => ({ ...r, rank: i + 1 }));
+  return rows
+    .sort((a, b) => b.score - a.score)
+    .map((r, i) => ({ ...r, rank: i + 1 }));
 }
