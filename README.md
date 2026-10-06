@@ -16,3 +16,11 @@ npx skills@latest add Klerith/fernando-skills
 
 ```
 
+## Comandos
+
+```bash
+npm run dev     # servidor de desarrollo (http://localhost:3000)
+npm run build   # build de producción
+npm run lint    # eslint (flat config, eslint.config.mjs)
+npx tsc --noEmit  # chequeo de tipos
+```
