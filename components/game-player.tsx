@@ -1,15 +1,18 @@
 "use client";
-
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ENGINES } from "@/lib/engines";
 import type { EngineHandle, GameEngine } from "@/lib/engines/types";
 import type { Game } from "@/lib/games";
+import { createClient } from "@/lib/supabase/client";
 import { useSession } from "./session-provider";
-
 const LIVES = 3;
-const CANVAS_STYLE = { position: "absolute", inset: 0, width: "100%", height: "100%" } as const;
-
+const CANVAS_STYLE = {
+  position: "absolute",
+  inset: 0,
+  width: "100%",
+  height: "100%",
+} as const;
 export function GamePlayer({ game }: { game: Game }) {
   const { user } = useSession();
   const [score, setScore] = useState(0);
@@ -22,10 +25,11 @@ export function GamePlayer({ game }: { game: Game }) {
   const [paused, setPaused] = useState(false);
   const [over, setOver] = useState(false);
   const [edited, setEdited] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
+  const [saveState, setSaveState] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
   // La sesión se resuelve tras montar: se usa hasta que el jugador edite sus iniciales.
   const name = edited ?? user?.name ?? "INVITADO";
-
   useEffect(() => {
     if (!startEngine || !canvasRef.current) return;
     const handle = startEngine(canvasRef.current, {
@@ -43,18 +47,18 @@ export function GamePlayer({ game }: { game: Game }) {
       engineRef.current = null;
     };
   }, [startEngine, run]);
-
   useEffect(() => {
     if (startEngine || over || paused) return;
-    const t = setInterval(() => setScore((s) => s + Math.floor(10 + Math.random() * 90)), 220);
+    const t = setInterval(
+      () => setScore((s) => s + Math.floor(10 + Math.random() * 90)),
+      220,
+    );
     return () => clearInterval(t);
   }, [startEngine, over, paused]);
-
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- comportamiento heredado del template
     if (!startEngine && score > 0 && score % 2500 < 100) setLevel((l) => l + 1);
   }, [startEngine, score]);
-
   const restart = () => {
     setScore(0);
     setLevel(1);
@@ -62,49 +66,74 @@ export function GamePlayer({ game }: { game: Game }) {
     setRun((r) => r + 1);
     setPaused(false);
     setOver(false);
-    setSaved(false);
+    setSaveState("idle");
   };
-
   const togglePause = () => {
     if (paused) engineRef.current?.resume();
     else engineRef.current?.pause();
     setPaused(!paused);
   };
-
   const finish = () => {
     if (engineRef.current) engineRef.current.end();
     else setOver(true);
   };
-
-  const save = () => {
+  const save = async () => {
+    if (saveState === "saving" || saveState === "saved") return;
+    setSaveState("saving");
     try {
-      const all = JSON.parse(localStorage.getItem("av_scores") || "[]");
-      all.push({ game: game.id, score, name, at: Date.now() });
-      localStorage.setItem("av_scores", JSON.stringify(all));
-    } catch {}
-    setSaved(true);
+      const { error } = await createClient()
+        .from("scores")
+        .insert({ game_id: game.id, name, score });
+      setSaveState(error ? "error" : "saved");
+    } catch {
+      setSaveState("error");
+    }
   };
-
   return (
     <div className="av-player fade-in">
       <div className="player-hud">
         <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
-          <div className="hud-stat"><div className="l">Jugador</div><div className="v" style={{ color: "var(--ink)" }}>{name}</div></div>
-          <div className="hud-stat"><div className="l">Puntuación</div><div className="v">{score.toLocaleString("es-ES")}</div></div>
-          <div className="hud-stat lives"><div className="l">Vidas</div><div className="v">{"♥ ".repeat(lives).trim()}</div></div>
-          <div className="hud-stat level"><div className="l">Nivel</div><div className="v">{String(level).padStart(2, "0")}</div></div>
+          <div className="hud-stat">
+            <div className="l">Jugador</div>
+            <div className="v" style={{ color: "var(--ink)" }}>
+              {name}
+            </div>
+          </div>
+          <div className="hud-stat">
+            <div className="l">Puntuación</div>
+            <div className="v">{score.toLocaleString("es-ES")}</div>
+          </div>
+          <div className="hud-stat lives">
+            <div className="l">Vidas</div>
+            <div className="v">{"♥ ".repeat(lives).trim()}</div>
+          </div>
+          <div className="hud-stat level">
+            <div className="l">Nivel</div>
+            <div className="v">{String(level).padStart(2, "0")}</div>
+          </div>
         </div>
         <div className="hud-actions">
-          <button className="btn yellow" onClick={togglePause}>{paused ? "REANUDAR" : "PAUSA"}</button>
-          <button className="btn magenta" onClick={finish}>FIN</button>
-          <Link className="btn ghost" href={`/juegos/${game.id}`}>SALIR</Link>
+          <button className="btn yellow" onClick={togglePause}>
+            {paused ? "REANUDAR" : "PAUSA"}
+          </button>
+          <button className="btn magenta" onClick={finish}>
+            FIN
+          </button>
+          <Link className="btn ghost" href={`/juegos/${game.id}`}>
+            SALIR
+          </Link>
         </div>
       </div>
-
       <div className="crt">
         <div className="crt-screen">
           {startEngine ? (
-            <canvas key={run} ref={canvasRef} width={800} height={600} style={CANVAS_STYLE} />
+            <canvas
+              key={run}
+              ref={canvasRef}
+              width={800}
+              height={600}
+              style={CANVAS_STYLE}
+            />
           ) : (
             <div className="game-arena">
               <div className="grid-floor"></div>
@@ -115,10 +144,23 @@ export function GamePlayer({ game }: { game: Game }) {
             </div>
           )}
           {paused && (
-            <div className="crt-content" style={{ background: "rgba(0,0,0,0.6)", zIndex: 5 }}>
+            <div
+              className="crt-content"
+              style={{ background: "rgba(0,0,0,0.6)", zIndex: 5 }}
+            >
               <div>
-                <div className="pixel neon-yellow" style={{ fontSize: 22 }}>EN PAUSA</div>
-                <div className="mono" style={{ fontSize: 11, color: "var(--ink-dim)", marginTop: 10, letterSpacing: "0.16em" }}>
+                <div className="pixel neon-yellow" style={{ fontSize: 22 }}>
+                  EN PAUSA
+                </div>
+                <div
+                  className="mono"
+                  style={{
+                    fontSize: 11,
+                    color: "var(--ink-dim)",
+                    marginTop: 10,
+                    letterSpacing: "0.16em",
+                  }}
+                >
                   PULSA REANUDAR PARA CONTINUAR
                 </div>
               </div>
@@ -131,28 +173,57 @@ export function GamePlayer({ game }: { game: Game }) {
           <span>CARGA · 1MB</span>
         </div>
       </div>
-
       {over && (
         <div className="modal-bd">
-          <div className="modal" role="dialog" aria-modal="true" aria-labelledby="av-over-title">
+          <div
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="av-over-title"
+          >
             <h2 id="av-over-title">FIN DEL JUEGO</h2>
             <div className="final-label">PUNTUACIÓN FINAL</div>
             <div className="final">{score.toLocaleString("es-ES")}</div>
-            {!saved ? (
-              <div className="input-row">
-                <input
-                  value={name}
-                  onChange={(e) => setEdited(e.target.value.toUpperCase().slice(0, 10))}
-                  placeholder="TUS INICIALES"
-                />
-                <button className="btn yellow" onClick={save}>GUARDAR PUNTUACIÓN</button>
-              </div>
+            {saveState !== "saved" ? (
+              <>
+                <div className="input-row">
+                  <input
+                    value={name}
+                    onChange={(e) =>
+                      setEdited(e.target.value.toUpperCase().slice(0, 10))
+                    }
+                    placeholder="TUS INICIALES"
+                    disabled={saveState === "saving"}
+                  />
+                  <button
+                    className="btn yellow"
+                    onClick={save}
+                    disabled={saveState === "saving"}
+                  >
+                    {saveState === "saving"
+                      ? "GUARDANDO…"
+                      : saveState === "error"
+                        ? "REINTENTAR"
+                        : "GUARDAR PUNTUACIÓN"}
+                  </button>
+                </div>
+                {saveState === "error" && (
+                  <div className="save-error" role="alert">
+                    ▸ NO SE PUDO GUARDAR. REVISA TU CONEXIÓN E INTÉNTALO DE
+                    NUEVO.
+                  </div>
+                )}
+              </>
             ) : (
               <div className="toast-saved">▸ PUNTUACIÓN GUARDADA_</div>
             )}
             <div className="actions">
-              <button className="btn" onClick={restart}>JUGAR DE NUEVO</button>
-              <Link className="btn magenta" href="/games">VOLVER AL VAULT</Link>
+              <button className="btn" onClick={restart}>
+                JUGAR DE NUEVO
+              </button>
+              <Link className="btn magenta" href="/games">
+                VOLVER AL VAULT
+              </Link>
             </div>
           </div>
         </div>
