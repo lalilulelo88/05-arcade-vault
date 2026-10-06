@@ -7,7 +7,7 @@ import { RevealObserver } from "@/components/home/reveal-observer";
 import { GAMES } from "@/lib/games";
 import { FAQS, FEATURES, HOME_STATS, RECENT_SCORES, TOP_PLAYERS } from "@/lib/home";
 
-export const metadata: Metadata = { title: "Inicio" };
+export const metadata: Metadata = { title: "Inicio · Arcade Vault" };
 
 const fmt = (n: number) => n.toLocaleString("es-ES");
 
