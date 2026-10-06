@@ -15,7 +15,7 @@ export function Nav() {
       ? pathname.startsWith("/salon")
       : name === "auth"
         ? pathname.startsWith("/auth")
-        : pathname === "/" || pathname.startsWith("/juegos") || pathname.startsWith("/jugar");
+        : pathname.startsWith("/games") || pathname.startsWith("/juegos") || pathname.startsWith("/jugar");
   const cls = (name: "biblioteca" | "salon" | "auth") => (isActive(name) ? "active" : "");
   const close = () => setOpen(false);
 
@@ -29,7 +29,7 @@ export function Nav() {
           </div>
         </Link>
         <div className="links">
-          <Link className={cls("biblioteca")} href="/">Biblioteca</Link>
+          <Link className={cls("biblioteca")} href="/games">Biblioteca</Link>
           <Link className={cls("salon")} href="/salon">Salón de la Fama</Link>
         </div>
         <div className="spacer"></div>
@@ -48,7 +48,7 @@ export function Nav() {
       <div className={"av-mobile-backdrop" + (open ? " open" : "")} onClick={close}></div>
       <aside className={"av-mobile-panel" + (open ? " open" : "")}>
         <div className="pixel neon-cyan" style={{ fontSize: 11, marginBottom: 16 }}>MENÚ</div>
-        <Link className={cls("biblioteca")} href="/" onClick={close}>Biblioteca</Link>
+        <Link className={cls("biblioteca")} href="/games" onClick={close}>Biblioteca</Link>
         <Link className={cls("salon")} href="/salon" onClick={close}>Salón de la Fama</Link>
         <Link className={cls("auth")} href="/auth" onClick={close}>{user ? "Cuenta" : "Iniciar Sesión"}</Link>
         <div style={{ flex: 1 }}></div>
