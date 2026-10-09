@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useRef } from "react";
 import type { Game } from "@/lib/games";
 
-export function GameCard({ game }: { game: Game }) {
+export function GameCard({ game, best }: { game: Game; best: number }) {
   const router = useRouter();
   const tiltRef = useRef<HTMLDivElement>(null);
   const href = `/juegos/${game.id}`;
@@ -40,7 +40,7 @@ export function GameCard({ game }: { game: Game }) {
         <div className="row">
           <div className="score-badge">
             <span>MEJOR PUNTUACIÓN</span>
-            <b>{game.best.toLocaleString("es-ES")}</b>
+            <b>{best.toLocaleString("es-ES")}</b>
           </div>
           <Link
             href={href}

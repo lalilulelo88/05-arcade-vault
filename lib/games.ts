@@ -8,14 +8,6 @@ export type Game = {
   cat: Category;
   cover: string;
   color: Accent;
-  best: number;
-  plays: string;
-};
-export type ScoreRow = {
-  rank: number;
-  name: string;
-  score: number;
-  date: string;
 };
 export const GAMES: Game[] = [
   {
@@ -26,19 +18,15 @@ export const GAMES: Game[] = [
     cat: "ARCADE",
     cover: "cover-bricks",
     color: "cyan",
-    best: 28450,
-    plays: "12.4K",
   },
   {
     id: "caida",
-    title: "CAÍDA",
+    title: "THETRIS",
     short: "Encaja las piezas antes de que el techo te aplaste.",
-    long: "Piezas geométricas descienden desde la oscuridad. Rótalas, encástralas y limpia líneas para sobrevivir. La velocidad aumenta sin piedad cada 10 líneas.",
+    long: "Piezas geométricas descienden desde la oscuridad. Rótalas, encástralas y limpia líneas para sobrevivir. Reserva una pieza con hold, encadena combos, T-spins y Tetris, y aguanta mientras la velocidad sube cada 10 líneas.",
     cat: "PUZZLE",
     cover: "cover-tetro",
     color: "magenta",
-    best: 184220,
-    plays: "31.8K",
   },
   {
     id: "serpentina",
@@ -48,8 +36,6 @@ export const GAMES: Game[] = [
     cat: "ARCADE",
     cover: "cover-snake",
     color: "green",
-    best: 7820,
-    plays: "9.1K",
   },
   {
     id: "gloton",
@@ -59,8 +45,6 @@ export const GAMES: Game[] = [
     cat: "ARCADE",
     cover: "cover-glot",
     color: "yellow",
-    best: 96400,
-    plays: "27.2K",
   },
   {
     id: "invasores",
@@ -70,8 +54,6 @@ export const GAMES: Game[] = [
     cat: "SHOOTER",
     cover: "cover-invaders",
     color: "green",
-    best: 54190,
-    plays: "18.0K",
   },
   {
     id: "rocas",
@@ -81,8 +63,6 @@ export const GAMES: Game[] = [
     cat: "SHOOTER",
     cover: "cover-rocas",
     color: "yellow",
-    best: 41200,
-    plays: "15.6K",
   },
   {
     id: "asteroids",
@@ -92,8 +72,6 @@ export const GAMES: Game[] = [
     cat: "SHOOTER",
     cover: "cover-rocas",
     color: "cyan",
-    best: 0,
-    plays: "0",
   },
   {
     id: "ranaria",
@@ -103,8 +81,6 @@ export const GAMES: Game[] = [
     cat: "ARCADE",
     cover: "cover-rana",
     color: "green",
-    best: 18900,
-    plays: "6.4K",
   },
   {
     id: "duelo-pixel",
@@ -114,8 +90,6 @@ export const GAMES: Game[] = [
     cat: "VERSUS",
     cover: "cover-duelo",
     color: "cyan",
-    best: 24,
-    plays: "4.2K",
   },
 ];
 export const CATS: ("TODOS" | Category)[] = [
@@ -125,50 +99,3 @@ export const CATS: ("TODOS" | Category)[] = [
   "SHOOTER",
   "VERSUS",
 ];
-const PLAYERS = [
-  "PX_KAI",
-  "NEONFOX",
-  "Z3R0COOL",
-  "M00NRYU",
-  "VAULT_07",
-  "GLITCHA",
-  "ATARI_KID",
-  "CYBER_LU",
-  "MAGENTA88",
-  "SCANLINE",
-  "BIT_LORD",
-  "ARKADYA",
-  "DROID_X",
-  "RGB_QUEEN",
-  "PIXEL_DAD",
-  "RETROVIRA",
-  "VECTORX",
-  "JOY_STK",
-];
-// Determinista: mismo seed, mismas filas (evita errores de hidratación).
-export function seededScores(seed: number, count = 12): ScoreRow[] {
-  let s = seed;
-  const rand = () => (s = (s * 9301 + 49297) % 233280) / 233280;
-  const used = new Set<string>();
-  const rows: ScoreRow[] = [];
-  for (let i = 0; i < count; i++) {
-    let name: string;
-    do {
-      name = PLAYERS[Math.floor(rand() * PLAYERS.length)];
-    } while (used.has(name) && used.size < PLAYERS.length);
-    used.add(name);
-    const base = Math.floor(50000 + rand() * 250000);
-    const score = base - i * Math.floor(2000 + rand() * 4000);
-    const day = String(1 + Math.floor(rand() * 28)).padStart(2, "0");
-    const mon = String(1 + Math.floor(rand() * 12)).padStart(2, "0");
-    rows.push({
-      rank: i + 1,
-      name,
-      score: Math.max(score, 1000),
-      date: `${day}/${mon}/2026`,
-    });
-  }
-  return rows
-    .sort((a, b) => b.score - a.score)
-    .map((r, i) => ({ ...r, rank: i + 1 }));
-}

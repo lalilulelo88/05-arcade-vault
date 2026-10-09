@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ENGINES } from "@/lib/engines";
-import type { EngineHandle, GameEngine } from "@/lib/engines/types";
+import type { EngineEntry, EngineHandle } from "@/lib/engines/types";
 import type { Game } from "@/lib/games";
 import { createClient } from "@/lib/supabase/client";
 import { useSession } from "./session-provider";
@@ -12,6 +12,7 @@ const CANVAS_STYLE = {
   inset: 0,
   width: "100%",
   height: "100%",
+  objectFit: "contain", // un canvas de otra proporción queda centrado en la pantalla 4:3
 } as const;
 export function GamePlayer({ game }: { game: Game }) {
   const { user } = useSession();
@@ -21,7 +22,8 @@ export function GamePlayer({ game }: { game: Game }) {
   const [run, setRun] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<EngineHandle | null>(null);
-  const startEngine = ENGINES[game.id] as GameEngine | undefined;
+  const entry = ENGINES[game.id] as EngineEntry | undefined;
+  const startEngine = entry?.start;
   const [paused, setPaused] = useState(false);
   const [over, setOver] = useState(false);
   const [edited, setEdited] = useState<string | null>(null);
@@ -130,8 +132,8 @@ export function GamePlayer({ game }: { game: Game }) {
             <canvas
               key={run}
               ref={canvasRef}
-              width={800}
-              height={600}
+              width={entry?.width}
+              height={entry?.height}
               style={CANVAS_STYLE}
             />
           ) : (
