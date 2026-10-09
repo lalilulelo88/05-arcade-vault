@@ -12,6 +12,7 @@ const CANVAS_STYLE = {
   inset: 0,
   width: "100%",
   height: "100%",
+  objectFit: "contain", // un canvas de otra proporción queda centrado en la pantalla 4:3
 } as const;
 export function GamePlayer({ game }: { game: Game }) {
   const { user } = useSession();
@@ -131,8 +132,8 @@ export function GamePlayer({ game }: { game: Game }) {
             <canvas
               key={run}
               ref={canvasRef}
-              width={800}
-              height={600}
+              width={entry?.width}
+              height={entry?.height}
               style={CANVAS_STYLE}
             />
           ) : (
