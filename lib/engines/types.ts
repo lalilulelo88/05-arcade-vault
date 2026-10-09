@@ -14,3 +14,8 @@ export type GameEngine = (
   canvas: HTMLCanvasElement,
   events: EngineEvents,
 ) => EngineHandle;
+export type EngineEntry = {
+  start: GameEngine;
+  width: number; // resolución interna del canvas
+  height: number;
+};
