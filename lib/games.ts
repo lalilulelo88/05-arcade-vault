@@ -31,7 +31,7 @@ export const GAMES: Game[] = [
   },
   {
     id: "caida",
-    title: "CAÍDA",
+    title: "THETRIS",
     short: "Encaja las piezas antes de que el techo te aplaste.",
     long: "Piezas geométricas descienden desde la oscuridad. Rótalas, encástralas y limpia líneas para sobrevivir. Reserva una pieza con hold, encadena combos, T-spins y Tetris, y aguanta mientras la velocidad sube cada 10 líneas.",
     cat: "PUZZLE",
