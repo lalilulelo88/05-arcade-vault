@@ -1,6 +1,6 @@
 # SPEC 08 — ARKANOID jugable con leaderboard
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 > **Depende de:** SPEC 05, SPEC 06, SPEC 07
 > **Fecha:** 2026-10-09
 > **Objetivo:** Portar `references/started-games/04-arkanoid/` (núcleo + power-ups) a un motor TypeScript, hacerlo jugable en `/jugar/arkanoid` y guardar sus puntajes en el leaderboard de `/salon`.
