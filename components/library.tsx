@@ -5,7 +5,7 @@ import { ENGINES } from "@/lib/engines";
 import { CATS, GAMES } from "@/lib/games";
 import { GameCard } from "./game-card";
 
-export function Library() {
+export function Library({ best }: { best: Record<string, number> }) {
   const [q, setQ] = useState("");
   const [cat, setCat] = useState<(typeof CATS)[number]>("TODOS");
 
@@ -32,7 +32,7 @@ export function Library() {
 
       <div className="av-grid">
         {filtered.map((g) => (
-          <GameCard key={g.id} game={g} />
+          <GameCard key={g.id} game={g} best={best[g.id] ?? 0} />
         ))}
         {filtered.length === 0 && (
           <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: 80, color: "var(--ink-faint)" }}>
