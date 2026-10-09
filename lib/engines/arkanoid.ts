@@ -23,6 +23,29 @@ const MAX_BOUNCE_ANGLE = Math.PI / 3; // 60° desde la vertical
 const LAUNCH_ANGLE = Math.PI / 6; // 30° desde la vertical, hacia la derecha
 const EXPLOSION_MS = 150;
 const MAX_DT = 1 / 30;
+const PARTICLE_COUNT = 24;
+const PARTICLE_MS = 500;
+const POWERUP_DROP_CHANCE = 0.25;
+const POWERUP_W = 40;
+const POWERUP_H = 20;
+const POWERUP_FALL_SPEED = 150; // px/s
+const X3_ANGLES = [-40, 0, 40]; // grados desde la vertical, hacia arriba
+const SB_MS = 15000;
+const LASER_MS = 20000;
+const LASER_COOLDOWN_MS = 300;
+const LASER_SPEED = 600; // px/s
+const LASER_W = 4;
+const LASER_H = 14;
+const XL_MIN_MS = 30000;
+const XL_MAX_MS = 40000;
+type PowerupType = "XL" | "X3" | "L" | "SB";
+const POWERUP_TYPES: PowerupType[] = ["XL", "X3", "L", "SB"];
+const POWERUP_COLORS: Record<PowerupType, string> = {
+  XL: "#e53935",
+  X3: "#1e88e5",
+  L: "#fdd835",
+  SB: "#43a047",
+};
 // Evita el scroll de la página sin tocar los campos de texto
 const PAGE_KEYS = ["ArrowLeft", "ArrowRight", "Space"];
 type BlockColor =
@@ -71,7 +94,24 @@ type Block = {
   exploding: boolean;
   explodeLeft: number; // ms
 };
-type Ball = { x: number; y: number; vx: number; vy: number; r: number };
+type Ball = {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  r: number;
+  piercing?: boolean;
+};
+type Powerup = { type: PowerupType; x: number; y: number };
+type Laser = { x: number; y: number }; // y = parte superior
+type Particle = {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  color: string;
+};
 // Plantillas: ¿hay bloque en la fila r (de `rows`) y columna c?
 const SHAPES: ((r: number, c: number, rows: number) => boolean)[] = [
   () => true, // rect
@@ -130,6 +170,12 @@ export const startArkanoid: GameEngine = (
     w: PADDLE_W,
     h: PADDLE_H,
   };
+  let particles: Particle[] = [];
+  let powerups: Powerup[] = [];
+  let lasers: Laser[] = [];
+  // ms restantes; 0 = inactivo
+  const fx = { xlLeft: 0, sbLeft: 0, laserLeft: 0, laserCooldown: 0 };
+  let sbBall = null as Ball | null;
   const keys: Record<string, boolean> = {};
   // ── Eventos (solo cuando el valor cambia) ───────────────────────────────────
   let sentScore = -1;
@@ -154,7 +200,99 @@ export const startArkanoid: GameEngine = (
     balls[0].x = paddle.x + paddle.w / 2;
     balls[0].y = paddle.y - balls[0].r;
   };
+  // Cambia el ancho de la paleta manteniendo su centro y sin salirse del canvas
+  const setPaddleWidth = (w: number) => {
+    paddle.x = Math.max(0, Math.min(W - w, paddle.x + (paddle.w - w) / 2));
+    paddle.w = w;
+  };
+  const endSB = () => {
+    if (sbBall) sbBall.piercing = false;
+    fx.sbLeft = 0;
+    sbBall = null;
+  };
+  // Quita cápsulas, rayos y efectos, y devuelve la paleta a su ancho normal
+  const resetEffects = () => {
+    powerups = [];
+    lasers = [];
+    fx.xlLeft = fx.sbLeft = fx.laserLeft = fx.laserCooldown = 0;
+    sbBall = null;
+    setPaddleWidth(PADDLE_W);
+  };
+  const applyPowerup = (type: PowerupType) => {
+    if (type === "XL" && fx.xlLeft === 0) {
+      fx.xlLeft = XL_MIN_MS + Math.random() * (XL_MAX_MS - XL_MIN_MS);
+      setPaddleWidth(PADDLE_W * 2);
+    } else if (type === "X3") {
+      const { x, y } = balls[0];
+      for (const deg of X3_ANGLES) {
+        const a = (deg * Math.PI) / 180;
+        balls.push({
+          ...newBall(),
+          x,
+          y,
+          vx: BALL_SPEED * Math.sin(a),
+          vy: -BALL_SPEED * Math.cos(a),
+        });
+      }
+    } else if (type === "SB") {
+      endSB(); // un SB nuevo traslada el efecto a la bola más baja y reinicia los 15 s
+      sbBall = balls.reduce((a, c) => (c.y > a.y ? c : a));
+      sbBall.piercing = true;
+      fx.sbLeft = SB_MS;
+    } else if (type === "L") {
+      fx.laserLeft = LASER_MS;
+    }
+  };
+  const fireLaser = () => {
+    if (fx.laserLeft <= 0 || fx.laserCooldown > 0) return;
+    fx.laserCooldown = LASER_COOLDOWN_MS;
+    lasers.push(
+      { x: paddle.x + 4, y: paddle.y - LASER_H },
+      { x: paddle.x + paddle.w - 4 - LASER_W, y: paddle.y - LASER_H },
+    );
+  };
+  // Avanza los rayos; cada uno resta 1 golpe al bloque más bajo que toca y desaparece
+  const updateLasers = (dt: number) => {
+    lasers = lasers.filter((l) => {
+      l.y -= LASER_SPEED * dt;
+      let target: Block | null = null;
+      for (const bl of blocks) {
+        if (
+          bl.exploding ||
+          l.x + LASER_W <= bl.x ||
+          l.x >= bl.x + BLOCK_W ||
+          l.y + LASER_H <= bl.y ||
+          l.y >= bl.y + BLOCK_H
+        )
+          continue;
+        if (!target || bl.y > target.y) target = bl;
+      }
+      if (target) {
+        target.hits--;
+        score += POINTS_PER_HIT;
+        afterBlockHit(target);
+        return false;
+      }
+      return l.y + LASER_H > 0;
+    });
+  };
+  // Ráfaga de partículas hacia arriba desde el borde inferior, donde cayó la bola
+  const explodeBall = (b: Ball) => {
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      const a = -Math.random() * Math.PI;
+      const v = 80 + Math.random() * 220;
+      particles.push({
+        x: b.x,
+        y: H - 2,
+        vx: Math.cos(a) * v,
+        vy: Math.sin(a) * v,
+        life: PARTICLE_MS,
+        color: ["#fff", "#ffd60a", "#ff9f0a", "#ff453a"][i % 4],
+      });
+    }
+  };
   const startLevel = () => {
+    resetEffects();
     blocks = generateLevel();
     balls = [newBall()];
     banner = { text: `NIVEL ${level}`, left: BANNER_MS };
@@ -171,6 +309,13 @@ export const startArkanoid: GameEngine = (
     if (bl.hits > 0) return;
     bl.exploding = true;
     bl.explodeLeft = EXPLOSION_MS;
+    if (Math.random() < POWERUP_DROP_CHANCE) {
+      powerups.push({
+        type: POWERUP_TYPES[randomInt(POWERUP_TYPES.length)],
+        x: bl.x + (BLOCK_W - POWERUP_W) / 2,
+        y: bl.y + (BLOCK_H - POWERUP_H) / 2,
+      });
+    }
   };
   // Mueve una bola y resuelve sus colisiones; devuelve false si cae por abajo
   const updateBall = (b: Ball, dt: number) => {
@@ -188,7 +333,10 @@ export const startArkanoid: GameEngine = (
       b.y = b.r;
       b.vy = Math.abs(b.vy);
     }
-    if (b.y - b.r > H) return false;
+    if (b.y - b.r > H) {
+      explodeBall(b);
+      return false;
+    }
     // Paleta: el ángulo depende del punto de impacto (centro = vertical, borde = 60°)
     if (
       b.vy > 0 &&
@@ -212,21 +360,27 @@ export const startArkanoid: GameEngine = (
       const cx = Math.max(bl.x, Math.min(b.x, bl.x + BLOCK_W));
       const cy = Math.max(bl.y, Math.min(b.y, bl.y + BLOCK_H));
       if ((b.x - cx) ** 2 + (b.y - cy) ** 2 >= b.r ** 2) continue;
-      const penX = Math.min(b.x + b.r - bl.x, bl.x + BLOCK_W - (b.x - b.r));
-      const penY = Math.min(b.y + b.r - bl.y, bl.y + BLOCK_H - (b.y - b.r));
-      if (penX < penY) {
-        const left = b.x < bl.x + BLOCK_W / 2;
-        b.x = left ? bl.x - b.r : bl.x + BLOCK_W + b.r;
-        b.vx = left ? -Math.abs(b.vx) : Math.abs(b.vx);
+      if (b.piercing) {
+        // SB: destruye el bloque entero sin rebotar
+        score += POINTS_PER_HIT * bl.hits;
+        bl.hits = 0;
       } else {
-        const top = b.y < bl.y + BLOCK_H / 2;
-        b.y = top ? bl.y - b.r : bl.y + BLOCK_H + b.r;
-        b.vy = top ? -Math.abs(b.vy) : Math.abs(b.vy);
+        const penX = Math.min(b.x + b.r - bl.x, bl.x + BLOCK_W - (b.x - b.r));
+        const penY = Math.min(b.y + b.r - bl.y, bl.y + BLOCK_H - (b.y - b.r));
+        if (penX < penY) {
+          const left = b.x < bl.x + BLOCK_W / 2;
+          b.x = left ? bl.x - b.r : bl.x + BLOCK_W + b.r;
+          b.vx = left ? -Math.abs(b.vx) : Math.abs(b.vx);
+        } else {
+          const top = b.y < bl.y + BLOCK_H / 2;
+          b.y = top ? bl.y - b.r : bl.y + BLOCK_H + b.r;
+          b.vy = top ? -Math.abs(b.vy) : Math.abs(b.vy);
+        }
+        bl.hits--;
+        score += POINTS_PER_HIT;
       }
-      bl.hits--;
-      score += POINTS_PER_HIT;
       afterBlockHit(bl);
-      break;
+      if (!b.piercing) break;
     }
     return true;
   };
@@ -238,6 +392,12 @@ export const startArkanoid: GameEngine = (
       nextExtraAt += EXTRA_BALL_EVERY;
       banner = { text: "+1 BOLA", left: BANNER_MS };
     }
+    for (const q of particles) {
+      q.x += q.vx * dt;
+      q.y += q.vy * dt;
+      q.life -= dt * 1000;
+    }
+    particles = particles.filter((q) => q.life > 0);
     const dir =
       (keys.ArrowRight || keys.KeyD ? 1 : 0) -
       (keys.ArrowLeft || keys.KeyA ? 1 : 0);
@@ -252,6 +412,7 @@ export const startArkanoid: GameEngine = (
     balls = balls.filter((b) => updateBall(b, dt));
     if (balls.length === 0) {
       ballsLeft--;
+      resetEffects();
       if (ballsLeft > 0) {
         balls = [newBall()];
         state = "ready";
@@ -259,6 +420,27 @@ export const startArkanoid: GameEngine = (
       } else finish();
       return;
     }
+    for (const pu of powerups) pu.y += POWERUP_FALL_SPEED * dt;
+    powerups = powerups.filter((pu) => {
+      const caught =
+        pu.y + POWERUP_H >= paddle.y &&
+        pu.y <= paddle.y + paddle.h &&
+        pu.x + POWERUP_W >= paddle.x &&
+        pu.x <= paddle.x + paddle.w;
+      if (caught) applyPowerup(pu.type);
+      return !caught && pu.y < H;
+    });
+    if (fx.xlLeft > 0) {
+      fx.xlLeft = Math.max(0, fx.xlLeft - dt * 1000);
+      if (fx.xlLeft === 0) setPaddleWidth(PADDLE_W);
+    }
+    if (fx.sbLeft > 0) {
+      fx.sbLeft -= dt * 1000;
+      if (fx.sbLeft <= 0 || !sbBall || !balls.includes(sbBall)) endSB();
+    }
+    fx.laserLeft = Math.max(0, fx.laserLeft - dt * 1000);
+    fx.laserCooldown = Math.max(0, fx.laserCooldown - dt * 1000);
+    updateLasers(dt);
     for (const bl of blocks) if (bl.exploding) bl.explodeLeft -= dt * 1000;
     blocks = blocks.filter((bl) => !bl.exploding || bl.explodeLeft > 0);
     if (blocks.length === 0) {
@@ -290,8 +472,48 @@ export const startArkanoid: GameEngine = (
       }
     }
     sprite(SPRITE_PADDLE, paddle.x, paddle.y, paddle.w, paddle.h);
-    for (const b of balls)
-      sprite(SPRITE_BALL, b.x - b.r, b.y - b.r, b.r * 2, b.r * 2);
+    for (const b of balls) {
+      if (b.piercing) {
+        ctx.fillStyle = `hsl(${(performance.now() / 4) % 360}, 100%, 60%)`; // SB: colores cambiantes
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+        ctx.fill();
+      } else sprite(SPRITE_BALL, b.x - b.r, b.y - b.r, b.r * 2, b.r * 2);
+    }
+    for (const q of particles) {
+      ctx.globalAlpha = q.life / PARTICLE_MS;
+      ctx.fillStyle = q.color;
+      ctx.fillRect(q.x - 2, q.y - 2, 4, 4);
+    }
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = "#ff3b30";
+    for (const l of lasers) ctx.fillRect(l.x, l.y, LASER_W, LASER_H);
+    ctx.font = "bold 14px monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (const pu of powerups) {
+      ctx.fillStyle = POWERUP_COLORS[pu.type];
+      ctx.beginPath();
+      ctx.roundRect(pu.x, pu.y, POWERUP_W, POWERUP_H, 10);
+      ctx.fill();
+      ctx.fillStyle = "#000";
+      ctx.fillText(pu.type, pu.x + POWERUP_W / 2, pu.y + POWERUP_H / 2 + 1);
+    }
+    ctx.textBaseline = "alphabetic";
+    // Efectos con tiempo activos, abajo a la izquierda
+    const active: [PowerupType, number][] = [
+      ["XL", fx.xlLeft],
+      ["L", fx.laserLeft],
+      ["SB", fx.sbLeft],
+    ];
+    ctx.font = "16px monospace";
+    ctx.textAlign = "left";
+    active
+      .filter(([, ms]) => ms > 0)
+      .forEach(([name, ms], i) => {
+        ctx.fillStyle = POWERUP_COLORS[name];
+        ctx.fillText(`${name} ${Math.ceil(ms / 1000)}s`, 10, H - 10 - i * 20);
+      });
     ctx.textAlign = "center";
     if (banner.left > 0) {
       ctx.globalAlpha = Math.min(1, banner.left / 300);
@@ -319,7 +541,9 @@ export const startArkanoid: GameEngine = (
     if (PAGE_KEYS.includes(e.code)) e.preventDefault();
     keys[e.code] = true;
     if (!running || state === "over") return; // en pausa o terminada no se juega
-    if (e.code === "Space" && state === "ready") launch();
+    if (e.code !== "Space") return;
+    if (state === "ready") launch();
+    else if (!e.repeat) fireLaser();
   };
   const onKeyUp = (e: KeyboardEvent) => {
     keys[e.code] = false;
