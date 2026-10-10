@@ -26,6 +26,9 @@ No hay framework de tests configurado. Un hook `PostToolUse` (`.claude/hooks/for
 
 - Usa siempre /frontend-design para diseñar interfaces de usuario.
 - `/nuevo-juego <carpeta de references/started-games/ o descripción>` (`.claude/skills/nuevo-juego/`, plantilla en `template.md`): genera **solo la spec** (`specs/NN-slug.md`, estado Borrador) de un juego jugable con leaderboard. No escribe código; la implementación se hace luego con `/spec-impl NN-slug`.
+- Agente `game-planner` (`.claude/agents/game-planner.md`): recomienda qué juego añadir y registra lo sugerido en el To Do `references/game-suggestions.md` (su memoria). No escribe código ni specs.
+- Agente `skin-designer` (`.claude/agents/skin-designer.md`): dado UN juego que indiques, audita sus skins neon/retro/clasico legibles en modo oscuro y escribe la spec `specs/NN-skins-<game-id>.md` (Borrador, espera tu revisión) y, **al confirmarla, la pasa a Aprobado y la implementa él mismo** en la rama `spec-NN-skins-<game-id>` (un commit por paso, verifica con tsc/lint/build). Un juego por invocación. Registro de qué juegos ya tienen skins en `references/game-with-themes.md`.
+- Agente `game-jam` (`.claude/agents/game-jam.md`): dado un tema, inventa un juego y escribe 3 specs incrementales (Borrador) en `specs/game-jam/<game-id>/`. No escribe código.
 
 ## Arquitectura
 
