@@ -24,7 +24,8 @@ No hay framework de tests configurado. Un hook `PostToolUse` (`.claude/hooks/for
 
 ## Skills
 
-Usa siempre /frontend-design para diseñar interfaces de usuario.
+- Usa siempre /frontend-design para diseñar interfaces de usuario.
+- `/nuevo-juego <carpeta de references/started-games/ o descripción>` (`.claude/skills/nuevo-juego/`, plantilla en `template.md`): genera **solo la spec** (`specs/NN-slug.md`, estado Borrador) de un juego jugable con leaderboard. No escribe código; la implementación se hace luego con `/spec-impl NN-slug`.
 
 ## Arquitectura
 
@@ -34,13 +35,14 @@ Usa siempre /frontend-design para diseñar interfaces de usuario.
 
 ### Rutas
 
-`/` home, `/games` biblioteca, `/juegos/[id]` detalle, `/jugar/[id]` reproductor, `/salon` hall of fame, `/auth`, `/about` (formulario de contacto vía Server Action `app/about/actions.ts` + Resend).
+`/` home, `/games` biblioteca (solo juegos con motor), `/juegos/[id]` detalle (mejor puntaje y top 10 reales), `/jugar/[id]` reproductor, `/salon` hall of fame (top 12 real por juego), `/auth`, `/about` (formulario de contacto vía Server Action `app/about/actions.ts` + Resend).
 
 ### Catálogo y motores de juego
 
-- `lib/games.ts` define el catálogo `GAMES` (datos estáticos). Los datos de puntajes del hall of fame siguen siendo de muestra hasta la spec 06 (leaderboard en Supabase, tabla `scores`).
-- `lib/engines/` contiene los motores reales sobre canvas. `ENGINES` (`lib/engines/index.ts`) mapea `game.id` → `GameEngine`. Contrato en `lib/engines/types.ts`: `(canvas, events) => { pause, resume, end, destroy }`, con eventos `onScore/onLives/onLevel/onGameOver`; el estado vive en el closure del motor, sin estado de módulo.
-- `components/game-player.tsx` es el único consumidor: si hay motor para el juego lo ejecuta en un `<canvas>`; si no, cae a una simulación con `setInterval`. Para añadir un juego jugable: motor en `lib/engines/`, registrarlo en `ENGINES` y tener la entrada en `GAMES`.
+- `lib/games.ts` define el catálogo `GAMES` (datos estáticos). Hay entradas sin motor (gloton, invasores, rocas, ranaria, duelo-pixel) que no se muestran en la biblioteca.
+- `lib/engines/` contiene los motores reales sobre canvas: `asteroids`, `caida` (Tetris, "THETRIS"), `arkanoid` (spritesheet en `public/games/arkanoid`) y `serpentina` (Snake) (ver `references/implemented-games.md`) cuando se necesite implementar. `ENGINES` (`lib/engines/index.ts`) mapea `game.id` → `EngineEntry` `{ start, width, height }` (resolución interna del canvas). Contrato en `lib/engines/types.ts`: `GameEngine = (canvas, events) => { pause, resume, end, destroy }`, con eventos `onScore/onLives/onLevel/onGameOver`; el estado vive en el closure del motor, sin estado de módulo.
+- `components/game-player.tsx` es el único consumidor: si hay motor para el juego lo ejecuta en un `<canvas>` con el tamaño del motor; si no, cae a una simulación con `setInterval`. Al terminar permite "GUARDAR PUNTUACIÓN" (insert en `scores`). Para añadir un juego jugable: usar `/nuevo-juego`, luego motor en `lib/engines/`, registrarlo en `ENGINES` y tener la entrada en `GAMES`. `/games` y `components/library.tsx` filtran el catálogo por `id in ENGINES`.
+- Leaderboard: tabla `scores` (`game_id` → `games.id`, `name`, `score`, `created_at`) con tipos en `lib/supabase/database.types.ts`. `lib/scores.ts` (server) expone `getBestScores` y `getGameBoard`; `components/hall-of-fame.tsx` y `game-player.tsx` usan el cliente de navegador.
 
 ### Sesión y Supabase
 
