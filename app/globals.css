@@ -2791,3 +2791,129 @@ a {
     animation: none;
   }
 }
+/* ===== touch controls (spec 13) ===== */
+.touch-pad {
+  display: none;
+}
+@media (pointer: coarse) {
+  .av-player {
+    margin: 12px auto;
+    padding: 0 12px 24px;
+  }
+  .crt {
+    padding: 10px;
+    border-radius: 18px;
+  }
+  .crt-bottom {
+    display: none;
+  }
+  /* pantalla a la proporción del motor, limitada por el alto que dejan HUD y botonera */
+  .crt-screen {
+    aspect-ratio: var(--screen-ratio, 4 / 3);
+    width: min(100%, calc((100svh - 300px) * var(--screen-k, 1.333)));
+    min-width: 200px;
+    margin-inline: auto;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  .touch-pad {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 14px;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  .touch-pad[data-game="serpentina"] {
+    justify-content: center;
+  }
+  .tc-move,
+  .tc-action {
+    display: flex;
+    gap: 8px;
+  }
+  .touch-pad[data-game="serpentina"] .tc-move {
+    display: grid;
+    grid-template-columns: repeat(3, 64px);
+    grid-auto-rows: 64px;
+    grid-template-areas: ". u ." "l . r" ". d .";
+  }
+  .touch-pad[data-game="serpentina"] [data-code="ArrowUp"] {
+    grid-area: u;
+  }
+  .touch-pad[data-game="serpentina"] [data-code="ArrowLeft"] {
+    grid-area: l;
+  }
+  .touch-pad[data-game="serpentina"] [data-code="ArrowRight"] {
+    grid-area: r;
+  }
+  .touch-pad[data-game="serpentina"] [data-code="ArrowDown"] {
+    grid-area: d;
+  }
+  .tc-btn {
+    min-width: 56px;
+    min-height: 56px;
+    padding: 0 8px;
+    font-family: var(--pixel);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: var(--cyan);
+    background: rgba(0, 245, 255, 0.06);
+    border: 1px solid var(--cyan);
+    text-shadow: 0 0 6px rgba(0, 245, 255, 0.5);
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+    clip-path: polygon(
+      8px 0,
+      100% 0,
+      100% calc(100% - 8px),
+      calc(100% - 8px) 100%,
+      0 100%,
+      0 8px
+    );
+    transition:
+      background 60ms,
+      color 60ms;
+  }
+  .tc-btn:active {
+    color: #05050a;
+    background: var(--cyan);
+    text-shadow: none;
+  }
+  .tc-action .tc-btn {
+    min-width: 64px;
+    color: var(--magenta);
+    border-color: var(--magenta);
+    background: rgba(255, 0, 110, 0.07);
+    text-shadow: 0 0 6px rgba(255, 0, 110, 0.5);
+  }
+  .tc-action .tc-btn:active {
+    color: #05050a;
+    background: var(--magenta);
+    text-shadow: none;
+  }
+  .tc-action .tc-btn[data-code="Space"] {
+    min-width: 84px;
+    min-height: 72px;
+    color: var(--yellow);
+    border-color: var(--yellow);
+    background: rgba(245, 255, 0, 0.07);
+    text-shadow: 0 0 6px rgba(245, 255, 0, 0.5);
+  }
+  .tc-action .tc-btn[data-code="Space"]:active {
+    color: #05050a;
+    background: var(--yellow);
+    text-shadow: none;
+  }
+  /* Caída: seis botones, la acción se reparte en dos filas */
+  .touch-pad[data-game="caida"] .tc-action {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    max-width: 58%;
+  }
+}

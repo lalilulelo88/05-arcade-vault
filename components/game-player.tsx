@@ -179,6 +179,7 @@ export function GamePlayer({ game }: { game: Game }) {
             entry
               ? ({
                   "--screen-ratio": `${entry.width} / ${entry.height}`,
+                  "--screen-k": entry.width / entry.height, // para limitar el ancho según el alto disponible
                 } as CSSProperties)
               : undefined
           }
