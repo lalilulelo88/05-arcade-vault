@@ -1,4 +1,4 @@
-import type { EngineEvents, EngineHandle, GameEngine } from "./types";
+import type { EngineEvents, EngineHandle, GameEngine, SkinId } from "./types";
 const W = 800;
 const H = 800;
 const CELL = 40;
@@ -68,13 +68,76 @@ const FRUITS: Record<string, FruitSprite> = {
 };
 type FruitKey = keyof typeof FRUITS;
 const FRUIT_KEYS = Object.keys(FRUITS) as FruitKey[];
+type Palette = {
+  bg: string;
+  grid: string;
+  body: (f: number, i: number) => string; // f = 0 cabeza … 1 cola
+  glow: number; // shadowBlur de la serpiente, 0 = sin glow
+  glowColor: string;
+  fruitGlow: number; // shadowBlur de la fruta
+  fruitGlowColor: string;
+  fruitTint: string | null; // retro: silueta monocroma; null = sprite original
+  eyeWhite: string;
+  eyePupil: string;
+  text: string;
+  square: boolean; // retro: segmentos y ojos cuadrados a 2 px
+};
+const PALETTES: Record<SkinId, Palette> = {
+  clasico: {
+    bg: "#07070f",
+    grid: "rgba(255,255,255,0.08)",
+    body: (f) => `hsl(${135 - 25 * f} 100% ${60 - 28 * f}%)`,
+    glow: 14,
+    glowColor: "#39ff14",
+    fruitGlow: 0,
+    fruitGlowColor: "#000",
+    fruitTint: null,
+    eyeWhite: "#fff",
+    eyePupil: "#07070f",
+    text: "#fff",
+    square: false,
+  },
+  neon: {
+    bg: "#05050a",
+    grid: "#1a1a2e",
+    body: (f) => `hsl(${183 + 3 * f} ${100 - 13 * f}% ${50 - 17 * f}%)`, // #00f5ff → #0a8f9c
+    glow: 12,
+    glowColor: "#00f5ff",
+    fruitGlow: 10,
+    fruitGlowColor: "#ff006e",
+    fruitTint: null,
+    eyeWhite: "#ffffff",
+    eyePupil: "#05050a",
+    text: "#e6e9ff",
+    square: false,
+  },
+  retro: {
+    bg: "#061406",
+    grid: "#14381c",
+    body: (_f, i) => (i === 0 ? "#33ff66" : "#1f9a40"),
+    glow: 0,
+    glowColor: "#000",
+    fruitGlow: 0,
+    fruitGlowColor: "#000",
+    fruitTint: "#d98a00",
+    eyeWhite: "#d8ffd8",
+    eyePupil: "#061406",
+    text: "#33ff66",
+    square: true,
+  },
+};
+const q2 = (v: number) => Math.round(v / 2) * 2; // cuantiza a 2 px (retro)
 const same = (a: Cell, b: Cell) => a.x === b.x && a.y === b.y;
 const wrap = (v: number, n: number) => (v + n) % n;
 export const startSerpentina: GameEngine = (
   canvas: HTMLCanvasElement,
   events: EngineEvents,
+  skin: SkinId = "clasico",
 ): EngineHandle => {
   const ctx = canvas.getContext("2d")!;
+  const pal = PALETTES[skin];
+  const tint: HTMLCanvasElement | null = null; // spritesheet en silueta (retro)
+  const tintColor = "";
   const img = new Image();
   let loaded = false;
   // ── Estado ──────────────────────────────────────────────────────────────────
@@ -160,11 +223,11 @@ export const startSerpentina: GameEngine = (
     });
     const color = (i: number) => {
       const f = i / Math.max(1, pts.length - 1);
-      return `hsl(${135 - 25 * f} 100% ${60 - 28 * f}%)`;
+      return pal.body(f, i);
     };
     ctx.save();
-    ctx.shadowColor = "#39ff14";
-    ctx.shadowBlur = 14;
+    ctx.shadowColor = pal.glowColor;
+    ctx.shadowBlur = pal.glow;
     ctx.lineCap = "round";
     for (let i = pts.length - 1; i >= 0; i--) {
       const r = i === 0 ? HEAD_R : BODY_R;
@@ -193,20 +256,20 @@ export const startSerpentina: GameEngine = (
     for (const side of [-1, 1]) {
       const ex = h.x + d.x * 8 - d.y * 8 * side;
       const ey = h.y + d.y * 8 + d.x * 8 * side;
-      ctx.fillStyle = "#fff";
+      ctx.fillStyle = pal.eyeWhite;
       ctx.beginPath();
       ctx.arc(ex, ey, 5, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = "#07070f";
+      ctx.fillStyle = pal.eyePupil;
       ctx.beginPath();
       ctx.arc(ex + d.x * 2, ey + d.y * 2, 2.5, 0, Math.PI * 2);
       ctx.fill();
     }
   };
   const draw = () => {
-    ctx.fillStyle = "#07070f";
+    ctx.fillStyle = pal.bg;
     ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = "rgba(255,255,255,0.08)";
+    ctx.fillStyle = pal.grid;
     for (let y = 0; y < ROWS; y++)
       for (let x = 0; x < COLS; x++)
         ctx.fillRect(x * CELL + CELL / 2 - 1, y * CELL + CELL / 2 - 1, 2, 2);
@@ -228,7 +291,7 @@ export const startSerpentina: GameEngine = (
     }
     drawSnake();
     if (state === "ready") {
-      ctx.fillStyle = "#fff";
+      ctx.fillStyle = pal.text;
       ctx.font = "20px monospace";
       ctx.textAlign = "center";
       ctx.fillText("PULSA UNA FLECHA PARA EMPEZAR", W / 2, 500);
@@ -302,6 +365,9 @@ export const startSerpentina: GameEngine = (
   img.onerror = () => console.error("No se pudo cargar el spritesheet");
   img.src = SPRITE_URL;
   return {
+    setSkin: (s: SkinId) => {
+      pal = PALETTES[s];
+    },
     pause: () => {
       paused = true;
       stop();
