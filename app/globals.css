@@ -2938,7 +2938,7 @@ a {
   .touch-pad[data-game="caida"] .tc-action {
     display: grid;
     grid-template-columns: repeat(2, 94px);
-    grid-template-areas: "rot save" "fall fall";
+    grid-template-areas: "save rot" "fall fall";
   }
   .touch-pad[data-game="caida"] .tc-btn {
     min-height: 56px;
