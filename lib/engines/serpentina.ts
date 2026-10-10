@@ -135,9 +135,9 @@ export const startSerpentina: GameEngine = (
   skin: SkinId = "clasico",
 ): EngineHandle => {
   const ctx = canvas.getContext("2d")!;
-  const pal = PALETTES[skin];
-  const tint: HTMLCanvasElement | null = null; // spritesheet en silueta (retro)
-  const tintColor = "";
+  let pal = PALETTES[skin];
+  let tint: HTMLCanvasElement | null = null; // spritesheet en silueta (retro)
+  let tintColor = "";
   const img = new Image();
   let loaded = false;
   // ── Estado ──────────────────────────────────────────────────────────────────
