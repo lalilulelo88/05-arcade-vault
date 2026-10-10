@@ -2791,3 +2791,244 @@ a {
     animation: none;
   }
 }
+/* ===== touch controls (spec 13) ===== */
+.touch-pad {
+  display: none;
+}
+@media (pointer: coarse) {
+  .av-player {
+    margin: 12px auto;
+    padding: 0 12px 24px;
+    --pad-h: 86px; /* alto de la botonera + margen; arkanoid y asteroids */
+  }
+  .av-player[data-game="serpentina"] {
+    --pad-h: 178px;
+  }
+  .av-player[data-game="caida"] {
+    --pad-h: 134px;
+  }
+  .crt {
+    padding: 10px;
+    border-radius: 18px;
+  }
+  .crt-bottom {
+    display: none;
+  }
+  /* pantalla a la proporción del motor, limitada por el alto que dejan HUD y botonera */
+  .crt-screen {
+    aspect-ratio: var(--screen-ratio, 4 / 3);
+    /* alto disponible = viewport − nav/HUD/márgenes (310px) − botonera del juego */
+    width: min(
+      100%,
+      calc((100svh - 310px - var(--pad-h, 86px)) * var(--screen-k, 1.333))
+    );
+    min-width: 200px;
+    margin-inline: auto;
+    /* borde neón: separa el área de juego del marco negro del CRT */
+    border-radius: 6px;
+    box-shadow:
+      0 0 0 2px var(--cyan),
+      0 0 14px 2px rgba(0, 245, 255, 0.45),
+      inset 0 0 20px rgba(0, 245, 255, 0.12);
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  .touch-pad {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 14px;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  .touch-pad[data-game="serpentina"] {
+    justify-content: center;
+  }
+  .tc-move,
+  .tc-action {
+    display: flex;
+    gap: 8px;
+  }
+  .touch-pad[data-game="serpentina"] .tc-move {
+    display: grid;
+    grid-template-columns: repeat(3, 52px);
+    grid-auto-rows: 52px;
+    gap: 4px;
+    grid-template-areas: ". u ." "l . r" ". d .";
+  }
+  .touch-pad[data-game="serpentina"] .tc-btn {
+    min-width: 0;
+    min-height: 0;
+  }
+  .touch-pad[data-game="serpentina"] [data-code="ArrowUp"] {
+    grid-area: u;
+  }
+  .touch-pad[data-game="serpentina"] [data-code="ArrowLeft"] {
+    grid-area: l;
+  }
+  .touch-pad[data-game="serpentina"] [data-code="ArrowRight"] {
+    grid-area: r;
+  }
+  .touch-pad[data-game="serpentina"] [data-code="ArrowDown"] {
+    grid-area: d;
+  }
+  .tc-btn {
+    min-width: 56px;
+    min-height: 56px;
+    padding: 0 8px;
+    font-family: var(--pixel);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    color: var(--cyan);
+    background: rgba(0, 245, 255, 0.06);
+    border: 1px solid var(--cyan);
+    text-shadow: 0 0 6px rgba(0, 245, 255, 0.5);
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+    clip-path: polygon(
+      8px 0,
+      100% 0,
+      100% calc(100% - 8px),
+      calc(100% - 8px) 100%,
+      0 100%,
+      0 8px
+    );
+    transition:
+      background 60ms,
+      color 60ms;
+  }
+  .tc-move .tc-btn {
+    font-size: 20px;
+  }
+  .tc-btn:active {
+    color: #05050a;
+    background: var(--cyan);
+    text-shadow: none;
+  }
+  .tc-action .tc-btn {
+    min-width: 64px;
+    color: var(--magenta);
+    border-color: var(--magenta);
+    background: rgba(255, 0, 110, 0.07);
+    text-shadow: 0 0 6px rgba(255, 0, 110, 0.5);
+  }
+  .tc-action .tc-btn:active {
+    color: #05050a;
+    background: var(--magenta);
+    text-shadow: none;
+  }
+  .tc-action .tc-btn[data-code="Space"] {
+    min-width: 84px;
+    min-height: 72px;
+    color: var(--yellow);
+    border-color: var(--yellow);
+    background: rgba(245, 255, 0, 0.07);
+    text-shadow: 0 0 6px rgba(245, 255, 0, 0.5);
+  }
+  .tc-action .tc-btn[data-code="Space"]:active {
+    color: #05050a;
+    background: var(--yellow);
+    text-shadow: none;
+  }
+  /* Caída: seis botones, la acción se reparte en dos filas */
+  .touch-pad[data-game="caida"] .tc-move {
+    display: grid;
+    grid-template-columns: repeat(3, 56px);
+    grid-template-areas: ". u ." "l d r";
+  }
+  .touch-pad[data-game="caida"] .tc-action {
+    display: grid;
+    grid-template-columns: repeat(2, 76px);
+    grid-template-areas: "save rot";
+    align-self: stretch; /* botones altos: ocupan el alto de la cruceta */
+  }
+  .touch-pad[data-game="caida"] .tc-action .tc-btn {
+    min-width: 0;
+    min-height: 0;
+    padding: 0 4px;
+    font-size: 9px;
+    letter-spacing: 0.02em;
+  }
+  .touch-pad[data-game="caida"] .tc-action [data-code="KeyC"] {
+    color: var(--yellow);
+    border-color: var(--yellow);
+    background: rgba(245, 255, 0, 0.07);
+    text-shadow: 0 0 6px rgba(245, 255, 0, 0.5);
+  }
+  .touch-pad[data-game="caida"] .tc-action [data-code="KeyC"]:active {
+    color: #05050a;
+    background: var(--yellow);
+    text-shadow: none;
+  }
+  .touch-pad[data-game="caida"] .tc-btn {
+    min-height: 56px;
+  }
+  .touch-pad[data-game="caida"] [data-code="ArrowLeft"] {
+    grid-area: l;
+  }
+  .touch-pad[data-game="caida"] [data-code="ArrowRight"] {
+    grid-area: r;
+  }
+  .touch-pad[data-game="caida"] [data-code="ArrowDown"] {
+    grid-area: d;
+  }
+  .touch-pad[data-game="caida"] [data-code="ArrowUp"] {
+    grid-area: rot;
+  }
+  .touch-pad[data-game="caida"] [data-code="KeyC"] {
+    grid-area: save;
+  }
+  .touch-pad[data-game="caida"] [data-code="Space"] {
+    grid-area: u;
+  }
+}
+.hud-stats {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+/* HUD compacto en táctil: stats en una fila y acciones debajo */
+@media (pointer: coarse) {
+  .player-hud {
+    padding: 8px 10px;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .hud-stats {
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+  }
+  .hud-stat {
+    gap: 2px;
+    min-width: 0;
+  }
+  .hud-stat .l {
+    font-size: 8px;
+    letter-spacing: 0.08em;
+  }
+  .hud-stat .v {
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .hud-actions {
+    flex-wrap: wrap;
+    gap: 6px;
+    width: 100%;
+  }
+  .hud-actions .btn {
+    flex: 1 1 0;
+    min-height: 44px;
+    padding: 0 8px;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+  }
+}

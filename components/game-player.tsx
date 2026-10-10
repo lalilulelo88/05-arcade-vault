@@ -1,11 +1,12 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { ENGINES } from "@/lib/engines";
 import type { EngineEntry, EngineHandle, SkinId } from "@/lib/engines/types";
 import type { Game } from "@/lib/games";
 import { createClient } from "@/lib/supabase/client";
 import { useSession } from "./session-provider";
+import { TouchControls } from "./touch-controls";
 const LIVES = 3;
 const SKINNED = ["asteroids", "arkanoid", "serpentina"]; // juegos con selector de skin
 const SKINS: { id: SkinId; label: string }[] = [
@@ -126,9 +127,9 @@ export function GamePlayer({ game }: { game: Game }) {
     }
   };
   return (
-    <div className="av-player fade-in">
+    <div className="av-player fade-in" data-game={game.id}>
       <div className="player-hud">
-        <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+        <div className="hud-stats">
           <div className="hud-stat">
             <div className="l">Jugador</div>
             <div className="v" style={{ color: "var(--ink)" }}>
@@ -172,7 +173,17 @@ export function GamePlayer({ game }: { game: Game }) {
         </div>
       </div>
       <div className="crt">
-        <div className="crt-screen">
+        <div
+          className="crt-screen"
+          style={
+            entry
+              ? ({
+                  "--screen-ratio": `${entry.width} / ${entry.height}`,
+                  "--screen-k": entry.width / entry.height, // para limitar el ancho según el alto disponible
+                } as CSSProperties)
+              : undefined
+          }
+        >
           {startEngine ? (
             <canvas
               key={run}
@@ -220,6 +231,9 @@ export function GamePlayer({ game }: { game: Game }) {
           <span>CARGA · 1MB</span>
         </div>
       </div>
+      {startEngine && (
+        <TouchControls gameId={game.id} active={!paused && !over} />
+      )}
       {over && (
         <div className="modal-bd">
           <div
