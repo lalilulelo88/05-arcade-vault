@@ -2917,3 +2917,48 @@ a {
     max-width: 58%;
   }
 }
+.hud-stats {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+/* HUD compacto en táctil: stats en una fila y acciones debajo */
+@media (pointer: coarse) {
+  .player-hud {
+    padding: 8px 10px;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .hud-stats {
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+  }
+  .hud-stat {
+    gap: 2px;
+    min-width: 0;
+  }
+  .hud-stat .l {
+    font-size: 8px;
+    letter-spacing: 0.08em;
+  }
+  .hud-stat .v {
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .hud-actions {
+    flex-wrap: wrap;
+    gap: 6px;
+    width: 100%;
+  }
+  .hud-actions .btn {
+    flex: 1 1 0;
+    min-height: 44px;
+    padding: 0 8px;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+  }
+}
