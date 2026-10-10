@@ -1,4 +1,4 @@
-import type { EngineEvents, EngineHandle, GameEngine } from "./types";
+import type { EngineEvents, EngineHandle, GameEngine, SkinId } from "./types";
 const W = 800;
 const H = 600;
 const SPRITE_URL = "/games/arkanoid/spritesheet-breakout.png";
@@ -40,12 +40,6 @@ const XL_MIN_MS = 30000;
 const XL_MAX_MS = 40000;
 type PowerupType = "XL" | "X3" | "L" | "SB";
 const POWERUP_TYPES: PowerupType[] = ["XL", "X3", "L", "SB"];
-const POWERUP_COLORS: Record<PowerupType, string> = {
-  XL: "#e53935",
-  X3: "#1e88e5",
-  L: "#fdd835",
-  SB: "#43a047",
-};
 // Evita el scroll de la página sin tocar los campos de texto
 const PAGE_KEYS = ["ArrowLeft", "ArrowRight", "Space"];
 type BlockColor =
@@ -59,6 +53,88 @@ const COLORS: BlockColor[] = [
   "hotpink",
   "green",
 ];
+type Palette = {
+  sprites: boolean; // true = spritesheet (clasico); false = vectorial
+  bg: string;
+  paddle: string;
+  ball: string;
+  ballPierce: string[] | null; // SB: parpadeo entre tonos; null = arcoíris
+  blocks: Record<BlockColor, string>; // solo vectorial
+  laser: string;
+  powerup: Record<PowerupType, string>;
+  powerupText: string;
+  particles: string[];
+  banner: string;
+  hint: string;
+  glow: number; // shadowBlur en px, 0 = sin glow
+  pixel: boolean; // enteros, bola cuadrada, cápsulas rectas, trazo 2 px
+};
+const PALETTES: Record<SkinId, Palette> = {
+  clasico: {
+    sprites: true,
+    bg: "#2b2b2b",
+    paddle: "#fff",
+    ball: "#fff",
+    ballPierce: null,
+    blocks: {} as Palette["blocks"], // sin uso: clasico dibuja el spritesheet
+    laser: "#ff3b30",
+    powerup: { XL: "#e53935", X3: "#1e88e5", L: "#fdd835", SB: "#43a047" },
+    powerupText: "#000",
+    particles: ["#fff", "#ffd60a", "#ff9f0a", "#ff453a"],
+    banner: "#ffd60a",
+    hint: "#fff",
+    glow: 0,
+    pixel: false,
+  },
+  neon: {
+    sprites: false,
+    bg: "#05050a",
+    paddle: "#00f5ff",
+    ball: "#ffffff",
+    ballPierce: null,
+    blocks: {
+      gray: "#7a7a99",
+      red: "#ff8a00",
+      yellow: "#f5ff00",
+      cyan: "#4d6dff",
+      magenta: "#b266ff",
+      hotpink: "#ff006e",
+      green: "#00ff88",
+    },
+    laser: "#00f5ff",
+    powerup: { XL: "#ff8a00", X3: "#00f5ff", L: "#ff006e", SB: "#00ff88" },
+    powerupText: "#05050a",
+    particles: ["#ffffff", "#f5ff00", "#ff8a00", "#ff006e"],
+    banner: "#f5ff00",
+    hint: "#e6e9ff",
+    glow: 10,
+    pixel: false,
+  },
+  retro: {
+    sprites: false,
+    bg: "#061406",
+    paddle: "#33ff66",
+    ball: "#ffb000",
+    ballPierce: ["#ffb000", "#d8ffd8"],
+    blocks: {
+      gray: "#d8ffd8",
+      red: "#2ea84f",
+      yellow: "#2ea84f",
+      green: "#2ea84f",
+      cyan: "#7fbf7f",
+      magenta: "#7fbf7f",
+      hotpink: "#7fbf7f",
+    },
+    laser: "#ffb000",
+    powerup: { XL: "#ffb000", X3: "#ffb000", L: "#ffb000", SB: "#ffb000" },
+    powerupText: "#061406",
+    particles: ["#d8ffd8", "#ffb000", "#33ff66", "#2ea84f"],
+    banner: "#ffb000",
+    hint: "#d8ffd8",
+    glow: 0,
+    pixel: true,
+  },
+};
 type Rect = { sx: number; sy: number; sw: number; sh: number };
 const rect = (sx: number, sy: number, sw: number, sh: number): Rect => ({
   sx,
@@ -153,8 +229,10 @@ type State = "ready" | "playing" | "over";
 export const startArkanoid: GameEngine = (
   canvas: HTMLCanvasElement,
   events: EngineEvents,
+  skin?: SkinId,
 ): EngineHandle => {
   const ctx = canvas.getContext("2d")!;
+  let pal = PALETTES[skin ?? "clasico"];
   // ── Estado ──────────────────────────────────────────────────────────────────
   let state = "ready" as State;
   let score = 0;
@@ -287,7 +365,7 @@ export const startArkanoid: GameEngine = (
         vx: Math.cos(a) * v,
         vy: Math.sin(a) * v,
         life: PARTICLE_MS,
-        color: ["#fff", "#ffd60a", "#ff9f0a", "#ff453a"][i % 4],
+        color: pal.particles[i % 4],
       });
     }
   };
@@ -456,8 +534,36 @@ export const startArkanoid: GameEngine = (
   let loaded = false;
   const sprite = (s: Rect, x: number, y: number, w: number, h: number) =>
     ctx.drawImage(img, s.sx, s.sy, s.sw, s.sh, x, y, w, h);
+  // Glow acotado a un solo dibujo; shadowBlur vuelve a 0 al terminar
+  const glowing = (color: string, fn: () => void) => {
+    if (pal.glow > 0) {
+      ctx.shadowColor = color;
+      ctx.shadowBlur = pal.glow;
+    }
+    fn();
+    ctx.shadowBlur = 0;
+  };
+  const px = (v: number) => (pal.pixel ? Math.round(v) : v);
+  // Bloque vectorial: gris = relleno con 2 golpes, solo borde con 1
+  const vectorBlock = (bl: Block) => {
+    const x = px(bl.x) + 1;
+    const y = px(bl.y) + 1;
+    const w = BLOCK_W - 2;
+    const h = BLOCK_H - 2;
+    const c = pal.blocks[bl.color];
+    ctx.lineWidth = pal.pixel ? 2 : 1;
+    if (bl.color === "gray" && bl.hits === 1) {
+      ctx.strokeStyle = c;
+      ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+      return;
+    }
+    ctx.fillStyle = c;
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = "rgba(255,255,255,0.4)";
+    ctx.fillRect(x, y, w, 2); // borde superior más claro
+  };
   const draw = () => {
-    ctx.fillStyle = "#2b2b2b";
+    ctx.fillStyle = pal.bg;
     ctx.fillRect(0, 0, W, H);
     for (const bl of blocks) {
       if (bl.exploding) {
@@ -466,19 +572,46 @@ export const startArkanoid: GameEngine = (
           3,
           Math.floor(((EXPLOSION_MS - bl.explodeLeft) / EXPLOSION_MS) * 4),
         );
-        sprite(explosionFrame(bl.color, i), bl.x, bl.y, BLOCK_W, BLOCK_H);
-      } else {
+        if (pal.sprites)
+          sprite(explosionFrame(bl.color, i), bl.x, bl.y, BLOCK_W, BLOCK_H);
+        else {
+          ctx.globalAlpha = 1 - i / 4;
+          ctx.fillStyle = "#fff";
+          ctx.fillRect(px(bl.x) + 1, px(bl.y) + 1, BLOCK_W - 2, BLOCK_H - 2);
+          ctx.globalAlpha = 1;
+        }
+      } else if (pal.sprites) {
         sprite(blockSprite(bl.color, bl.hits), bl.x, bl.y, BLOCK_W, BLOCK_H);
-      }
+      } else vectorBlock(bl);
     }
-    sprite(SPRITE_PADDLE, paddle.x, paddle.y, paddle.w, paddle.h);
+    if (pal.sprites)
+      sprite(SPRITE_PADDLE, paddle.x, paddle.y, paddle.w, paddle.h);
+    else {
+      ctx.fillStyle = pal.paddle;
+      glowing(pal.paddle, () =>
+        ctx.fillRect(px(paddle.x), px(paddle.y), px(paddle.w), paddle.h),
+      );
+    }
     for (const b of balls) {
-      if (b.piercing) {
-        ctx.fillStyle = `hsl(${(performance.now() / 4) % 360}, 100%, 60%)`; // SB: colores cambiantes
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
-        ctx.fill();
-      } else sprite(SPRITE_BALL, b.x - b.r, b.y - b.r, b.r * 2, b.r * 2);
+      const color = b.piercing
+        ? pal.ballPierce
+          ? pal.ballPierce[Math.floor(performance.now() / 100) % 2]
+          : `hsl(${(performance.now() / 4) % 360}, 100%, 60%)` // SB: colores cambiantes
+        : pal.ball;
+      if (pal.sprites && !b.piercing) {
+        sprite(SPRITE_BALL, b.x - b.r, b.y - b.r, b.r * 2, b.r * 2);
+        continue;
+      }
+      ctx.fillStyle = color;
+      glowing(color, () => {
+        if (pal.pixel)
+          ctx.fillRect(px(b.x - b.r), px(b.y - b.r), b.r * 2, b.r * 2);
+        else {
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
     }
     for (const q of particles) {
       ctx.globalAlpha = q.life / PARTICLE_MS;
@@ -486,17 +619,25 @@ export const startArkanoid: GameEngine = (
       ctx.fillRect(q.x - 2, q.y - 2, 4, 4);
     }
     ctx.globalAlpha = 1;
-    ctx.fillStyle = "#ff3b30";
-    for (const l of lasers) ctx.fillRect(l.x, l.y, LASER_W, LASER_H);
+    ctx.fillStyle = pal.laser;
+    for (const l of lasers)
+      glowing(pal.laser, () =>
+        ctx.fillRect(px(l.x), px(l.y), LASER_W, LASER_H),
+      );
     ctx.font = "bold 14px monospace";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     for (const pu of powerups) {
-      ctx.fillStyle = POWERUP_COLORS[pu.type];
-      ctx.beginPath();
-      ctx.roundRect(pu.x, pu.y, POWERUP_W, POWERUP_H, 10);
-      ctx.fill();
-      ctx.fillStyle = "#000";
+      ctx.fillStyle = pal.powerup[pu.type];
+      glowing(pal.powerup[pu.type], () => {
+        if (pal.pixel) ctx.fillRect(px(pu.x), px(pu.y), POWERUP_W, POWERUP_H);
+        else {
+          ctx.beginPath();
+          ctx.roundRect(pu.x, pu.y, POWERUP_W, POWERUP_H, 10);
+          ctx.fill();
+        }
+      });
+      ctx.fillStyle = pal.powerupText;
       ctx.fillText(pu.type, pu.x + POWERUP_W / 2, pu.y + POWERUP_H / 2 + 1);
     }
     ctx.textBaseline = "alphabetic";
@@ -511,19 +652,19 @@ export const startArkanoid: GameEngine = (
     active
       .filter(([, ms]) => ms > 0)
       .forEach(([name, ms], i) => {
-        ctx.fillStyle = POWERUP_COLORS[name];
+        ctx.fillStyle = pal.powerup[name];
         ctx.fillText(`${name} ${Math.ceil(ms / 1000)}s`, 10, H - 10 - i * 20);
       });
     ctx.textAlign = "center";
     if (banner.left > 0) {
       ctx.globalAlpha = Math.min(1, banner.left / 300);
-      ctx.fillStyle = "#ffd60a";
+      ctx.fillStyle = pal.banner;
       ctx.font = "bold 32px monospace";
       ctx.fillText(banner.text, W / 2, 420);
       ctx.globalAlpha = 1;
     }
     if (state === "ready") {
-      ctx.fillStyle = "#fff";
+      ctx.fillStyle = pal.hint;
       ctx.font = "16px monospace";
       ctx.fillText("ESPACIO PARA LANZAR", W / 2, 500);
     }
@@ -598,6 +739,9 @@ export const startArkanoid: GameEngine = (
       start();
     },
     end: finish,
+    setSkin: (next) => {
+      pal = PALETTES[next];
+    },
     destroy: () => {
       destroyed = true;
       stop();
