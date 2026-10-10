@@ -1,6 +1,6 @@
 # SPEC 07 — THETRIS (antes CAÍDA) jugable con leaderboard
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 > **Depende de:** SPEC 05, SPEC 06
 > **Fecha:** 2026-10-09
 > **Objetivo:** Portar `references/started-games/03-tetris/` (núcleo clásico) a un motor TypeScript, convertir la maqueta `caida` en un juego jugable en `/jugar/caida` y guardar sus puntajes en el leaderboard de `/salon`.
