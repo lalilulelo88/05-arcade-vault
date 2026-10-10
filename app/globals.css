@@ -2824,6 +2824,12 @@ a {
     );
     min-width: 200px;
     margin-inline: auto;
+    /* borde neón: separa el área de juego del marco negro del CRT */
+    border-radius: 6px;
+    box-shadow:
+      0 0 0 2px var(--cyan),
+      0 0 14px 2px rgba(0, 245, 255, 0.45),
+      inset 0 0 20px rgba(0, 245, 255, 0.12);
     touch-action: none;
     user-select: none;
     -webkit-user-select: none;
