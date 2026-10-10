@@ -2932,13 +2932,13 @@ a {
   /* Caída: seis botones, la acción se reparte en dos filas */
   .touch-pad[data-game="caida"] .tc-move {
     display: grid;
-    grid-template-columns: repeat(2, 56px);
-    grid-template-areas: "l r" "d d";
+    grid-template-columns: repeat(3, 56px);
+    grid-template-areas: ". u ." "l d r";
   }
   .touch-pad[data-game="caida"] .tc-action {
     display: grid;
-    grid-template-columns: repeat(2, 94px);
-    grid-template-areas: "save rot" "fall fall";
+    grid-template-columns: 112px;
+    grid-template-areas: "rot" "save";
   }
   .touch-pad[data-game="caida"] .tc-btn {
     min-height: 56px;
@@ -2959,7 +2959,7 @@ a {
     grid-area: save;
   }
   .touch-pad[data-game="caida"] [data-code="Space"] {
-    grid-area: fall;
+    grid-area: u;
   }
 }
 .hud-stats {
