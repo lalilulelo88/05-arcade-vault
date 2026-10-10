@@ -8,7 +8,7 @@ Estados: `—` sin skin · `spec` spec escrita (Borrador/Aprobado), sin código 
 | ------------ | ---------- | ------- | ---- | ----- | ----------------------------- |
 | `asteroids`  | ASTEROIDS  | ✔       | ✔    | ✔     | `specs/10-skins-asteroids.md` |
 | `caida`      | THETRIS    | —       | —    | —     | —                             |
-| `arkanoid`   | ARKANOID   | spec    | spec | spec  | `specs/11-skins-arkanoid.md`  |
+| `arkanoid`   | ARKANOID   | ✔       | ✔    | ✔     | `specs/11-skins-arkanoid.md`  |
 | `serpentina` | SERPENTINA | —       | —    | —     | —                             |
 
 `clasico` es el skin por defecto: conserva los colores originales del motor.

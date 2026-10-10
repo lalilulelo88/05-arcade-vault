@@ -1,6 +1,6 @@
 # SPEC 11 — Skins de ARKANOID (clasico, neon, retro)
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 > **Depende de:** SPEC 08 (motor Arkanoid), SPEC 10 (contrato de skins: `SkinId`, `skin?`, `setSkin?`, `SKINNED`, selector en `GamePlayer`)
 > **Fecha:** 2026-10-10
 > **Objetivo:** Añadir tres skins al motor `arkanoid` (`clasico` por defecto, `neon` y `retro`), legibles en modo oscuro con contraste WCAG verificado, reutilizando el patrón de Asteroids (spec 10).
