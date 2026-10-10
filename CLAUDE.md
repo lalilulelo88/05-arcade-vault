@@ -26,6 +26,7 @@ No hay framework de tests configurado. Un hook `PostToolUse` (`.claude/hooks/for
 
 - Usa siempre /frontend-design para diseñar interfaces de usuario.
 - `/nuevo-juego <carpeta de references/started-games/ o descripción>` (`.claude/skills/nuevo-juego/`, plantilla en `template.md`): genera **solo la spec** (`specs/NN-slug.md`, estado Borrador) de un juego jugable con leaderboard. No escribe código; la implementación se hace luego con `/spec-impl NN-slug`.
+- Agente `game-planner` (`.claude/agents/game-planner.md`): recomienda qué juego añadir y registra lo sugerido en el To Do `references/game-suggestions.md` (su memoria). No escribe código ni specs.
 
 ## Arquitectura
 
