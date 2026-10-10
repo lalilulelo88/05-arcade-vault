@@ -4,12 +4,12 @@ Referencia de qué juegos con motor ya tienen skins **implementados en código**
 
 Estados: `—` sin skin · `spec` spec escrita (Borrador/Aprobado), sin código · `✔` implementado.
 
-| id           | Título     | clasico | neon | retro | Spec |
-| ------------ | ---------- | ------- | ---- | ----- | ---- |
-| `asteroids`  | ASTEROIDS  | —       | —    | —     | —    |
-| `caida`      | THETRIS    | —       | —    | —     | —    |
-| `arkanoid`   | ARKANOID   | —       | —    | —     | —    |
-| `serpentina` | SERPENTINA | —       | —    | —     | —    |
+| id           | Título     | clasico | neon | retro | Spec                          |
+| ------------ | ---------- | ------- | ---- | ----- | ----------------------------- |
+| `asteroids`  | ASTEROIDS  | ✔       | ✔    | ✔     | `specs/10-skins-asteroids.md` |
+| `caida`      | THETRIS    | —       | —    | —     | —                             |
+| `arkanoid`   | ARKANOID   | —       | —    | —     | —                             |
+| `serpentina` | SERPENTINA | —       | —    | —     | —                             |
 
 `clasico` es el skin por defecto: conserva los colores originales del motor.
 

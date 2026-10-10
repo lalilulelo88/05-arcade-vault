@@ -2,11 +2,18 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ENGINES } from "@/lib/engines";
-import type { EngineEntry, EngineHandle } from "@/lib/engines/types";
+import type { EngineEntry, EngineHandle, SkinId } from "@/lib/engines/types";
 import type { Game } from "@/lib/games";
 import { createClient } from "@/lib/supabase/client";
 import { useSession } from "./session-provider";
 const LIVES = 3;
+const SKINNED = ["asteroids"]; // juegos con selector de skin
+const SKINS: { id: SkinId; label: string }[] = [
+  { id: "clasico", label: "CLÁSICO" },
+  { id: "neon", label: "NEÓN" },
+  { id: "retro", label: "RETRO" },
+];
+const skinKey = (gameId: string) => `av_skin_${gameId}`;
 const CANVAS_STYLE = {
   position: "absolute",
   inset: 0,
@@ -22,8 +29,11 @@ export function GamePlayer({ game }: { game: Game }) {
   const [run, setRun] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<EngineHandle | null>(null);
+  const skinRef = useRef<SkinId>("clasico"); // skin inicial al (re)crear el motor
   const entry = ENGINES[game.id] as EngineEntry | undefined;
   const startEngine = entry?.start;
+  const skinned = SKINNED.includes(game.id);
+  const [skin, setSkin] = useState<SkinId>("clasico");
   const [paused, setPaused] = useState(false);
   const [over, setOver] = useState(false);
   const [edited, setEdited] = useState<string | null>(null);
@@ -34,21 +44,45 @@ export function GamePlayer({ game }: { game: Game }) {
   const name = edited ?? user?.name ?? "INVITADO";
   useEffect(() => {
     if (!startEngine || !canvasRef.current) return;
-    const handle = startEngine(canvasRef.current, {
-      onScore: setScore,
-      onLives: setLives,
-      onLevel: setLevel,
-      onGameOver: (final) => {
-        setScore(final);
-        setOver(true);
+    const handle = startEngine(
+      canvasRef.current,
+      {
+        onScore: setScore,
+        onLives: setLives,
+        onLevel: setLevel,
+        onGameOver: (final) => {
+          setScore(final);
+          setOver(true);
+        },
       },
-    });
+      skinRef.current,
+    );
     engineRef.current = handle;
     return () => {
       handle.destroy();
       engineRef.current = null;
     };
   }, [startEngine, run]);
+  // Skin guardado: se lee tras montar para evitar desajuste de hidratación
+  useEffect(() => {
+    if (!skinned) return;
+    try {
+      const saved = localStorage.getItem(skinKey(game.id));
+      const found = SKINS.find((s) => s.id === saved);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- lectura de localStorage tras montar
+      if (found) setSkin(found.id);
+    } catch {}
+  }, [skinned, game.id]);
+  useEffect(() => {
+    skinRef.current = skin;
+    engineRef.current?.setSkin?.(skin); // sin reiniciar la partida
+  }, [skin, run, startEngine]);
+  const pickSkin = (next: SkinId) => {
+    setSkin(next);
+    try {
+      localStorage.setItem(skinKey(game.id), next);
+    } catch {}
+  };
   useEffect(() => {
     if (startEngine || over || paused) return;
     const t = setInterval(
@@ -115,6 +149,17 @@ export function GamePlayer({ game }: { game: Game }) {
           </div>
         </div>
         <div className="hud-actions">
+          {skinned &&
+            SKINS.map((s) => (
+              <button
+                key={s.id}
+                className={skin === s.id ? "btn" : "btn ghost"}
+                aria-pressed={skin === s.id}
+                onClick={() => pickSkin(s.id)}
+              >
+                {s.label}
+              </button>
+            ))}
           <button className="btn yellow" onClick={togglePause}>
             {paused ? "REANUDAR" : "PAUSA"}
           </button>

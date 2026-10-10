@@ -1,4 +1,4 @@
-import type { EngineEvents, EngineHandle, GameEngine } from "./types";
+import type { EngineEvents, EngineHandle, GameEngine, SkinId } from "./types";
 const W = 800;
 const H = 600;
 const wrap = (v: number, max: number) => ((v % max) + max) % max;
@@ -13,11 +13,69 @@ const TRIPLE_SPREAD = 0.18;
 const RADII = [0, 16, 30, 50]; // por tamaño 1, 2, 3
 const SPEEDS = [0, 85, 55, 32]; // velocidad base por tamaño
 const POINTS = [0, 100, 50, 20]; // puntos por tamaño
+type Palette = {
+  bg: string;
+  ship: string;
+  asteroid: string;
+  bullet: string;
+  powerUp: string;
+  flame: string;
+  particle: string; // "r,g,b" para componer el alpha
+  glow: { ship: number; asteroid: number; bullet: number; powerUp: number }; // shadowBlur en px, 0 = sin glow
+  lineWidth: number; // trazo de nave y asteroides
+  pixel: boolean; // redondeo a 2 px, uniones miter, balas cuadradas
+};
+const NO_GLOW = { ship: 0, asteroid: 0, bullet: 0, powerUp: 0 };
+const PALETTES: Record<SkinId, Palette> = {
+  clasico: {
+    bg: "#000",
+    ship: "#fff",
+    asteroid: "#fff",
+    bullet: "#fff",
+    powerUp: "#0ff",
+    flame: "rgba(255, 130, 0, 0.85)",
+    particle: "255,255,255",
+    glow: NO_GLOW,
+    lineWidth: 1.5,
+    pixel: false,
+  },
+  neon: {
+    bg: "#05050a",
+    ship: "#00f5ff",
+    asteroid: "#ff006e",
+    bullet: "#f5ff00",
+    powerUp: "#00ff88",
+    flame: "#ff8a00",
+    particle: "230,233,255",
+    glow: { ship: 10, asteroid: 6, bullet: 8, powerUp: 8 },
+    lineWidth: 1.5,
+    pixel: false,
+  },
+  retro: {
+    bg: "#061406",
+    ship: "#33ff66",
+    asteroid: "#2ea84f",
+    bullet: "#d8ffd8",
+    powerUp: "#ffb000",
+    flame: "#ffb000",
+    particle: "46,168,79",
+    glow: NO_GLOW,
+    lineWidth: 2,
+    pixel: true,
+  },
+};
 export const startAsteroids: GameEngine = (
   canvas: HTMLCanvasElement,
   events: EngineEvents,
+  skin: SkinId = "clasico",
 ): EngineHandle => {
   const ctx = canvas.getContext("2d")!;
+  let pal = PALETTES[skin] ?? PALETTES.clasico;
+  const snap = (v: number) => (pal.pixel ? Math.round(v / 2) * 2 : v);
+  const glow = (color: string, blur: number) => {
+    ctx.shadowColor = color;
+    ctx.shadowBlur = blur;
+  };
   // ── Input ───────────────────────────────────────────────────────────────────
   const keys: Record<string, boolean> = {};
   const justPressed: Record<string, boolean> = {};
@@ -25,7 +83,10 @@ export const startAsteroids: GameEngine = (
   const GAME_KEYS = ["ArrowLeft", "ArrowUp", "ArrowRight", "Space"];
   const blocksPage = (e: KeyboardEvent) =>
     GAME_KEYS.includes(e.code) &&
-    !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement);
+    !(
+      e.target instanceof HTMLInputElement ||
+      e.target instanceof HTMLTextAreaElement
+    );
 
   const onKeyDown = (e: KeyboardEvent) => {
     if (blocksPage(e)) e.preventDefault();
@@ -66,10 +127,17 @@ export const startAsteroids: GameEngine = (
       if (this.ttl <= 0) this.dead = true;
     }
     draw() {
-      ctx.fillStyle = "#fff";
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.save();
+      ctx.fillStyle = pal.bullet;
+      glow(pal.bullet, pal.glow.bullet);
+      if (pal.pixel) {
+        ctx.fillRect(snap(this.x) - 1, snap(this.y) - 1, 3, 3);
+      } else {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
     }
   }
   class Asteroid {
@@ -114,15 +182,16 @@ export const startAsteroids: GameEngine = (
     }
     draw() {
       ctx.save();
-      ctx.translate(this.x, this.y);
+      ctx.translate(snap(this.x), snap(this.y));
       ctx.rotate(this.rot);
-      ctx.strokeStyle = "#fff";
-      ctx.lineWidth = 1.5;
-      ctx.lineJoin = "round";
+      ctx.strokeStyle = pal.asteroid;
+      glow(pal.asteroid, pal.glow.asteroid);
+      ctx.lineWidth = pal.lineWidth;
+      ctx.lineJoin = pal.pixel ? "miter" : "round";
       ctx.beginPath();
-      ctx.moveTo(this.verts[0][0], this.verts[0][1]);
+      ctx.moveTo(snap(this.verts[0][0]), snap(this.verts[0][1]));
       for (let i = 1; i < this.verts.length; i++)
-        ctx.lineTo(this.verts[i][0], this.verts[i][1]);
+        ctx.lineTo(snap(this.verts[i][0]), snap(this.verts[i][1]));
       ctx.closePath();
       ctx.stroke();
       ctx.restore();
@@ -154,14 +223,16 @@ export const startAsteroids: GameEngine = (
       if (this.ttl < 2 && Math.floor(this.ttl * 8) % 2 === 0) return;
       const pulse = 0.85 + Math.sin(performance.now() / 150) * 0.15;
       ctx.save();
-      ctx.translate(this.x, this.y);
+      ctx.translate(snap(this.x), snap(this.y));
       ctx.rotate(Math.PI / 4);
-      ctx.strokeStyle = "#0ff";
+      ctx.strokeStyle = pal.powerUp;
+      glow(pal.powerUp, pal.glow.powerUp);
       ctx.lineWidth = 2;
+      ctx.lineJoin = pal.pixel ? "miter" : "round";
       const r = this.radius * pulse;
       ctx.strokeRect(-r, -r, r * 2, r * 2);
       ctx.restore();
-      ctx.fillStyle = "#0ff";
+      ctx.fillStyle = pal.powerUp; // texto sin glow
       ctx.font = "bold 12px monospace";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -232,11 +303,12 @@ export const startAsteroids: GameEngine = (
       if (this.invincible > 0 && Math.floor(this.invincible * 8) % 2 === 0)
         return;
       ctx.save();
-      ctx.translate(this.x, this.y);
+      ctx.translate(snap(this.x), snap(this.y));
       ctx.rotate(this.angle);
-      ctx.strokeStyle = "#fff";
-      ctx.lineWidth = 1.5;
-      ctx.lineJoin = "round";
+      ctx.strokeStyle = pal.ship;
+      glow(pal.ship, pal.glow.ship);
+      ctx.lineWidth = pal.lineWidth;
+      ctx.lineJoin = pal.pixel ? "miter" : "round";
       // Silueta clásica: triángulo con muesca trasera
       ctx.beginPath();
       ctx.moveTo(20, 0); // nariz
@@ -245,13 +317,14 @@ export const startAsteroids: GameEngine = (
       ctx.lineTo(-12, 9); // ala derecha
       ctx.closePath();
       ctx.stroke();
-      // Llama del propulsor
+      // Llama del propulsor (sin glow)
+      ctx.shadowBlur = 0;
       if (this.thrusting && Math.random() > 0.35) {
         ctx.beginPath();
         ctx.moveTo(-8, -4);
         ctx.lineTo(-8 - rand(6, 14), 0);
         ctx.lineTo(-8, 4);
-        ctx.strokeStyle = "rgba(255, 130, 0, 0.85)";
+        ctx.strokeStyle = pal.flame;
         ctx.stroke();
       }
       ctx.restore();
@@ -281,7 +354,7 @@ export const startAsteroids: GameEngine = (
     }
     draw() {
       const alpha = this.ttl / this.life;
-      ctx.strokeStyle = `rgba(255,255,255,${alpha.toFixed(2)})`;
+      ctx.strokeStyle = `rgba(${pal.particle},${alpha.toFixed(2)})`;
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(this.x, this.y);
@@ -426,7 +499,7 @@ export const startAsteroids: GameEngine = (
   };
   // ── Draw ────────────────────────────────────────────────────────────────────
   const draw = () => {
-    ctx.fillStyle = "#000";
+    ctx.fillStyle = pal.bg;
     ctx.fillRect(0, 0, W, H);
     particles.forEach((p) => p.draw());
     asteroids.forEach((a) => a.draw());
@@ -437,7 +510,7 @@ export const startAsteroids: GameEngine = (
     if (ship.tripleShot > 0) {
       ctx.textAlign = "left";
       ctx.textBaseline = "alphabetic";
-      ctx.fillStyle = "#0ff";
+      ctx.fillStyle = pal.powerUp;
       ctx.font = "15px monospace";
       ctx.fillText(`3x  ${ship.tripleShot.toFixed(1)}s`, 14, 26);
     }
@@ -472,6 +545,9 @@ export const startAsteroids: GameEngine = (
     end: () => {
       stop();
       finish();
+    },
+    setSkin: (next) => {
+      pal = PALETTES[next] ?? PALETTES.clasico;
     },
     destroy: () => {
       stop();
