@@ -1,6 +1,6 @@
 # SPEC 12 — Skins de SERPENTINA (clasico, neon, retro)
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 > **Depende de:** SPEC 09 (motor Serpentina) y SPEC 10 (patrón de skins: `SkinId`, `skin?`/`setSkin?` en el contrato y selector en `GamePlayer`)
 > **Fecha:** 2026-10-10
 > **Objetivo:** Añadir tres skins al motor `serpentina` (`clasico` por defecto, `neon` y `retro`), legibles en modo oscuro con contraste WCAG verificado, reutilizando el selector de skin del reproductor (persistido en `localStorage`).
