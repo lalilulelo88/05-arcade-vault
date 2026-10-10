@@ -127,7 +127,7 @@ export function GamePlayer({ game }: { game: Game }) {
     }
   };
   return (
-    <div className="av-player fade-in">
+    <div className="av-player fade-in" data-game={game.id}>
       <div className="player-hud">
         <div className="hud-stats">
           <div className="hud-stat">

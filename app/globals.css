@@ -2799,6 +2799,13 @@ a {
   .av-player {
     margin: 12px auto;
     padding: 0 12px 24px;
+    --pad-h: 86px; /* alto de la botonera + margen; arkanoid y asteroids */
+  }
+  .av-player[data-game="serpentina"] {
+    --pad-h: 178px;
+  }
+  .av-player[data-game="caida"] {
+    --pad-h: 134px;
   }
   .crt {
     padding: 10px;
@@ -2810,7 +2817,11 @@ a {
   /* pantalla a la proporción del motor, limitada por el alto que dejan HUD y botonera */
   .crt-screen {
     aspect-ratio: var(--screen-ratio, 4 / 3);
-    width: min(100%, calc((100svh - 300px) * var(--screen-k, 1.333)));
+    /* alto disponible = viewport − nav/HUD/márgenes (310px) − botonera del juego */
+    width: min(
+      100%,
+      calc((100svh - 310px - var(--pad-h, 86px)) * var(--screen-k, 1.333))
+    );
     min-width: 200px;
     margin-inline: auto;
     touch-action: none;
@@ -2839,9 +2850,14 @@ a {
   }
   .touch-pad[data-game="serpentina"] .tc-move {
     display: grid;
-    grid-template-columns: repeat(3, 64px);
-    grid-auto-rows: 64px;
+    grid-template-columns: repeat(3, 52px);
+    grid-auto-rows: 52px;
+    gap: 4px;
     grid-template-areas: ". u ." "l . r" ". d .";
+  }
+  .touch-pad[data-game="serpentina"] .tc-btn {
+    min-width: 0;
+    min-height: 0;
   }
   .touch-pad[data-game="serpentina"] [data-code="ArrowUp"] {
     grid-area: u;
@@ -2880,6 +2896,9 @@ a {
       background 60ms,
       color 60ms;
   }
+  .tc-move .tc-btn {
+    font-size: 20px;
+  }
   .tc-btn:active {
     color: #05050a;
     background: var(--cyan);
@@ -2911,10 +2930,36 @@ a {
     text-shadow: none;
   }
   /* Caída: seis botones, la acción se reparte en dos filas */
+  .touch-pad[data-game="caida"] .tc-move {
+    display: grid;
+    grid-template-columns: repeat(2, 56px);
+    grid-template-areas: "l r" "d d";
+  }
   .touch-pad[data-game="caida"] .tc-action {
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    max-width: 58%;
+    display: grid;
+    grid-template-columns: repeat(2, 94px);
+    grid-template-areas: "rot save" "fall fall";
+  }
+  .touch-pad[data-game="caida"] .tc-btn {
+    min-height: 56px;
+  }
+  .touch-pad[data-game="caida"] [data-code="ArrowLeft"] {
+    grid-area: l;
+  }
+  .touch-pad[data-game="caida"] [data-code="ArrowRight"] {
+    grid-area: r;
+  }
+  .touch-pad[data-game="caida"] [data-code="ArrowDown"] {
+    grid-area: d;
+  }
+  .touch-pad[data-game="caida"] [data-code="ArrowUp"] {
+    grid-area: rot;
+  }
+  .touch-pad[data-game="caida"] [data-code="KeyC"] {
+    grid-area: save;
+  }
+  .touch-pad[data-game="caida"] [data-code="Space"] {
+    grid-area: fall;
   }
 }
 .hud-stats {
