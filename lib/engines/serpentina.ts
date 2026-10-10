@@ -155,6 +155,24 @@ export const startSerpentina: GameEngine = (
   let prev = snake; // posiciones del tick anterior, para interpolar
   let fruit: { cell: Cell; key: FruitKey } | null = null;
   let lastScore = -1;
+  // Silueta monocroma del spritesheet (retro); se descarta si el skin no la usa
+  const buildTint = () => {
+    if (pal.fruitTint === null || !loaded) {
+      tint = null;
+      return;
+    }
+    if (tint && tintColor === pal.fruitTint) return;
+    const c = document.createElement("canvas");
+    c.width = img.naturalWidth;
+    c.height = img.naturalHeight;
+    const t = c.getContext("2d")!;
+    t.drawImage(img, 0, 0);
+    t.globalCompositeOperation = "source-in";
+    t.fillStyle = pal.fruitTint;
+    t.fillRect(0, 0, c.width, c.height);
+    tint = c;
+    tintColor = pal.fruitTint;
+  };
   const sync = () => {
     if (score !== lastScore) {
       lastScore = score;
@@ -232,15 +250,30 @@ export const startSerpentina: GameEngine = (
     for (let i = pts.length - 1; i >= 0; i--) {
       const r = i === 0 ? HEAD_R : BODY_R;
       ctx.fillStyle = color(i);
-      ctx.beginPath();
-      ctx.arc(pts[i].x, pts[i].y, r, 0, Math.PI * 2);
-      ctx.fill();
+      if (pal.square)
+        ctx.fillRect(q2(pts[i].x - r), q2(pts[i].y - r), 2 * r, 2 * r);
+      else {
+        ctx.beginPath();
+        ctx.arc(pts[i].x, pts[i].y, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
       const next = pts[i + 1];
       // Conector hacia el segmento siguiente para solapar; se omite al cruzar un borde
       if (
         next &&
         Math.hypot(next.x - pts[i].x, next.y - pts[i].y) < CELL * 1.6
       ) {
+        if (pal.square) {
+          const x0 = Math.min(pts[i].x, next.x) - BODY_R;
+          const y0 = Math.min(pts[i].y, next.y) - BODY_R;
+          ctx.fillRect(
+            q2(x0),
+            q2(y0),
+            Math.abs(next.x - pts[i].x) + 2 * BODY_R,
+            Math.abs(next.y - pts[i].y) + 2 * BODY_R,
+          );
+          continue;
+        }
         ctx.strokeStyle = color(i);
         ctx.lineWidth = BODY_R * 2;
         ctx.beginPath();
@@ -257,6 +290,12 @@ export const startSerpentina: GameEngine = (
       const ex = h.x + d.x * 8 - d.y * 8 * side;
       const ey = h.y + d.y * 8 + d.x * 8 * side;
       ctx.fillStyle = pal.eyeWhite;
+      if (pal.square) {
+        ctx.fillRect(q2(ex - 5), q2(ey - 5), 10, 10);
+        ctx.fillStyle = pal.eyePupil;
+        ctx.fillRect(q2(ex + d.x * 2 - 2), q2(ey + d.y * 2 - 2), 4, 4);
+        continue;
+      }
       ctx.beginPath();
       ctx.arc(ex, ey, 5, 0, Math.PI * 2);
       ctx.fill();
@@ -282,8 +321,9 @@ export const startSerpentina: GameEngine = (
         ctx.shadowColor = pal.fruitGlowColor;
         ctx.shadowBlur = pal.fruitGlow;
       }
+      ctx.imageSmoothingEnabled = pal.fruitTint === null;
       ctx.drawImage(
-        img,
+        tint ?? img,
         s.x,
         s.y,
         s.w,
@@ -365,6 +405,7 @@ export const startSerpentina: GameEngine = (
   img.onload = () => {
     if (destroyed) return;
     loaded = true;
+    buildTint();
     draw();
     if (!paused) start();
   };
@@ -373,6 +414,7 @@ export const startSerpentina: GameEngine = (
   return {
     setSkin: (s: SkinId) => {
       pal = PALETTES[s];
+      buildTint();
     },
     pause: () => {
       paused = true;
