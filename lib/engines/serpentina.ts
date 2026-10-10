@@ -277,6 +277,11 @@ export const startSerpentina: GameEngine = (
       const s = FRUITS[fruit.key];
       const dh = FRUIT_H;
       const dw = (s.w * dh) / s.h;
+      ctx.save();
+      if (pal.fruitGlow > 0) {
+        ctx.shadowColor = pal.fruitGlowColor;
+        ctx.shadowBlur = pal.fruitGlow;
+      }
       ctx.drawImage(
         img,
         s.x,
@@ -288,6 +293,7 @@ export const startSerpentina: GameEngine = (
         dw,
         dh,
       );
+      ctx.restore();
     }
     drawSnake();
     if (state === "ready") {
