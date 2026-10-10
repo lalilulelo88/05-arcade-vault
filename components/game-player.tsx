@@ -7,7 +7,7 @@ import type { Game } from "@/lib/games";
 import { createClient } from "@/lib/supabase/client";
 import { useSession } from "./session-provider";
 const LIVES = 3;
-const SKINNED = ["asteroids"]; // juegos con selector de skin
+const SKINNED = ["asteroids", "arkanoid"]; // juegos con selector de skin
 const SKINS: { id: SkinId; label: string }[] = [
   { id: "clasico", label: "CLÁSICO" },
   { id: "neon", label: "NEÓN" },
