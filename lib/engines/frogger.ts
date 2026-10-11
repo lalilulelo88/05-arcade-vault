@@ -253,7 +253,7 @@ export const startFrogger: GameEngine = (
   events: EngineEvents,
   skin: SkinId = "clasico",
 ): EngineHandle => {
-  const ctx = canvas.getContext("2d")!;
+  let ctx = canvas.getContext("2d")!; // se intercambia un instante al generar sprites
   let pal = PALETTES[skin];
   // ── Estado ──────────────────────────────────────────────────────────────────
   let state = "ready" as State;
@@ -396,6 +396,10 @@ export const startFrogger: GameEngine = (
     ctx.shadowColor = color;
     ctx.shadowBlur = pal.glow;
   };
+  // El glow solo va en el cuerpo: los detalles (ruedas, vetas, ojos) no lo necesitan y cada shadowBlur cuesta rasterizado
+  const noGlow = () => {
+    if (pal.glow > 0) ctx.shadowBlur = 0;
+  };
   const drawBackground = () => {
     const zone = (r0: number, r1: number, color: string) => {
       ctx.fillStyle = color;
@@ -458,6 +462,7 @@ export const startFrogger: GameEngine = (
       ctx.fillStyle = pal.cars[row % pal.cars.length];
       roundRect(x + 3, y + 8, w - 6, 24, 5);
       ctx.fill();
+      noGlow();
       ctx.fillStyle = pal.window;
       ctx.fillRect(x + (dir > 0 ? w - 17 : 8), y + 12, 9, 16);
     } else {
@@ -470,6 +475,7 @@ export const startFrogger: GameEngine = (
       ctx.fillStyle = pal.truckCab;
       roundRect(cabX, y + 8, cab, 24, 4);
       ctx.fill();
+      noGlow();
     }
     ctx.fillStyle = pal.wheel;
     const wheels = e.type === "car" ? [0.28, 0.72] : [0.15, 0.4, 0.85];
@@ -495,6 +501,7 @@ export const startFrogger: GameEngine = (
     ctx.fillStyle = pal.log;
     roundRect(x + 2, y + 6, w - 4, 28, 10);
     ctx.fill();
+    noGlow();
     ctx.strokeStyle = pal.logGrain;
     ctx.lineWidth = 2;
     for (let k = 1; k < e.width * 2; k++) {
@@ -509,6 +516,7 @@ export const startFrogger: GameEngine = (
     ctx.save();
     glow(pal.turtleStroke);
     for (let k = 0; k < e.width; k++) {
+      glow(pal.turtleStroke);
       const cx = px((e.col + k + 0.5) * CELL);
       const cy = row * CELL + CELL / 2;
       ctx.beginPath();
@@ -519,6 +527,7 @@ export const startFrogger: GameEngine = (
       ctx.strokeStyle = pal.turtleStroke;
       ctx.lineWidth = 2;
       ctx.stroke();
+      noGlow();
       ctx.beginPath();
       ctx.moveTo(cx - 8, cy);
       ctx.lineTo(cx + 8, cy);
@@ -560,6 +569,7 @@ export const startFrogger: GameEngine = (
       ctx.stroke();
     }
     ctx.fill();
+    noGlow();
     for (const s of [-1, 1]) {
       ctx.fillStyle = pal.eye;
       if (pal.square) {
@@ -577,6 +587,30 @@ export const startFrogger: GameEngine = (
       ctx.fill();
     }
     ctx.restore();
+  };
+  const drawEntity = (e: Entity, lane: Lane) => {
+    if (e.type === "log") drawLog(e, lane.row);
+    else if (e.type === "turtle") drawTurtles(e, lane.row);
+    else drawVehicle(e, lane.row, lane.dir);
+  };
+  // Con glow, el shadowBlur por entidad y frame es lo que más cuesta (≈5 ms medidos en neón):
+  // se rasteriza una vez por carril (todas sus entidades son iguales) y se vuelca con drawImage
+  const SPRITE_PAD = 16;
+  const sprites = new Map<number, HTMLCanvasElement>();
+  const laneSprite = (lane: Lane) => {
+    let sp = sprites.get(lane.row);
+    if (sp) return sp;
+    const e0 = lane.entities[0];
+    sp = document.createElement("canvas");
+    sp.width = e0.width * CELL + 2 * SPRITE_PAD;
+    sp.height = CELL + 2 * SPRITE_PAD;
+    const main = ctx;
+    ctx = sp.getContext("2d")!;
+    ctx.translate(SPRITE_PAD, SPRITE_PAD - lane.row * CELL);
+    drawEntity({ ...e0, col: 0 }, lane);
+    ctx = main;
+    sprites.set(lane.row, sp);
+    return sp;
   };
   const drawHud = () => {
     ctx.font = "bold 13px monospace";
@@ -604,9 +638,13 @@ export const startFrogger: GameEngine = (
     drawBackground();
     for (const lane of lanes)
       for (const e of lane.entities) {
-        if (e.type === "log") drawLog(e, lane.row);
-        else if (e.type === "turtle") drawTurtles(e, lane.row);
-        else drawVehicle(e, lane.row, lane.dir);
+        if (pal.glow > 0)
+          ctx.drawImage(
+            laneSprite(lane),
+            e.col * CELL - SPRITE_PAD,
+            lane.row * CELL - SPRITE_PAD,
+          );
+        else drawEntity(e, lane);
       }
     drawHud();
     const t = frog.animating ? Math.min(frog.animT / JUMP_MS, 1) : 0;
@@ -678,6 +716,7 @@ export const startFrogger: GameEngine = (
   return {
     setSkin: (s: SkinId) => {
       pal = PALETTES[s];
+      sprites.clear();
     },
     pause: stop,
     resume: start,
