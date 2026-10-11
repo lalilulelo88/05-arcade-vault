@@ -402,9 +402,12 @@ export const startFrogger: GameEngine = (
   // ── Dibujado ────────────────────────────────────────────────────────────────
   const roundRect = (x: number, y: number, w: number, h: number, r: number) => {
     ctx.beginPath();
-    ctx.roundRect(x, y, w, h, r);
+    if (pal.square) ctx.rect(x, y, w, h);
+    else ctx.roundRect(x, y, w, h, r);
   };
   // Glow acotado a la entidad: llamar dentro de save()/restore()
+  // retro: coordenadas enteras para evitar antialiasing
+  const px = (v: number) => (pal.square ? Math.round(v) : v);
   const glow = (color: string) => {
     if (pal.glow <= 0) return;
     ctx.shadowColor = color;
@@ -420,6 +423,13 @@ export const startFrogger: GameEngine = (
     zone(ROW_SAFE_MID, ROW_SAFE_MID, pal.safe);
     zone(ROW_ROAD_TOP, ROW_ROAD_BOT, pal.road);
     zone(ROW_START, ROW_START, pal.safe);
+    if (pal.square && pal.zoneLine) {
+      // patrón de olas: distingue el río aunque las zonas casi no difieran en luminancia
+      ctx.fillStyle = pal.zoneLine;
+      for (let r = ROW_RIVER_TOP; r <= ROW_RIVER_BOT; r++)
+        for (let x = (r % 2) * 40; x < FROGGER_W; x += 80)
+          ctx.fillRect(x, r * CELL + 4, 20, 2);
+    }
     ctx.strokeStyle = pal.laneLine;
     ctx.setLineDash([16, 16]);
     ctx.lineWidth = 2;
@@ -456,7 +466,7 @@ export const startFrogger: GameEngine = (
     }
   };
   const drawVehicle = (e: Entity, row: number, dir: 1 | -1) => {
-    const x = e.col * CELL;
+    const x = px(e.col * CELL);
     const y = row * CELL;
     const w = e.width * CELL;
     ctx.save();
@@ -482,6 +492,10 @@ export const startFrogger: GameEngine = (
     const wheels = e.type === "car" ? [0.28, 0.72] : [0.15, 0.4, 0.85];
     for (const k of wheels) {
       for (const wy of [y + 8, y + 32]) {
+        if (pal.square) {
+          ctx.fillRect(px(x + w * k) - 4, wy - 4, 8, 8);
+          continue;
+        }
         ctx.beginPath();
         ctx.arc(x + w * k, wy, 4, 0, Math.PI * 2);
         ctx.fill();
@@ -490,7 +504,7 @@ export const startFrogger: GameEngine = (
     ctx.restore();
   };
   const drawLog = (e: Entity, row: number) => {
-    const x = e.col * CELL;
+    const x = px(e.col * CELL);
     const y = row * CELL;
     const w = e.width * CELL;
     ctx.save();
@@ -512,10 +526,11 @@ export const startFrogger: GameEngine = (
     ctx.save();
     if (!e.submerged) glow(pal.turtleStroke);
     for (let k = 0; k < e.width; k++) {
-      const cx = (e.col + k + 0.5) * CELL;
+      const cx = px((e.col + k + 0.5) * CELL);
       const cy = row * CELL + CELL / 2;
       ctx.beginPath();
-      ctx.arc(cx, cy, 15, 0, Math.PI * 2);
+      if (pal.square) ctx.rect(cx - 14, cy - 14, 28, 28);
+      else ctx.arc(cx, cy, 15, 0, Math.PI * 2);
       if (e.submerged) {
         ctx.strokeStyle = pal.turtleSunk;
         ctx.lineWidth = 2;
@@ -559,7 +574,8 @@ export const startFrogger: GameEngine = (
       }
     }
     ctx.beginPath();
-    ctx.ellipse(0, 0, 14, 12, 0, 0, Math.PI * 2);
+    if (pal.square) ctx.rect(-13, -11, 26, 22);
+    else ctx.ellipse(0, 0, 14, 12, 0, 0, Math.PI * 2);
     if (pal.frogOutline) {
       // trazo de 4 px: 2 px quedan fuera del cuerpo y separan la rana de troncos y tortugas
       ctx.strokeStyle = pal.frogOutline;
@@ -569,6 +585,12 @@ export const startFrogger: GameEngine = (
     ctx.fill();
     for (const s of [-1, 1]) {
       ctx.fillStyle = pal.eye;
+      if (pal.square) {
+        ctx.fillRect(s * 6 - 3, -11, 6, 6);
+        ctx.fillStyle = pal.pupil;
+        ctx.fillRect(s * 6 - 1, -10, 2, 3);
+        continue;
+      }
       ctx.beginPath();
       ctx.arc(s * 6, -8, 4, 0, Math.PI * 2);
       ctx.fill();
@@ -588,6 +610,10 @@ export const startFrogger: GameEngine = (
     ctx.fillText(`NIVEL ${level}`, FROGGER_W / 2, 14);
     ctx.fillStyle = pal.frog;
     for (let i = 0; i < lives; i++) {
+      if (pal.square) {
+        ctx.fillRect(FROGGER_W - 20 - i * 20, 3, 12, 12);
+        continue;
+      }
       ctx.beginPath();
       ctx.arc(FROGGER_W - 14 - i * 20, 9, 7, 0, Math.PI * 2);
       ctx.fill();
