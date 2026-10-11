@@ -1,4 +1,4 @@
-import type { EngineEvents, EngineHandle, GameEngine } from "./types";
+import type { EngineEvents, EngineHandle, GameEngine, SkinId } from "./types";
 const COLS = 16;
 const ROWS = 14;
 const CELL = 40; // px
@@ -146,12 +146,123 @@ function goalIndex(col: number) {
     if (c >= mouthCol(i) && c < mouthCol(i) + 2) return i;
   return -1;
 }
-const CAR_COLORS = ["#e63946", "#f4d35e", "#3a86ff"];
+type Palette = {
+  goal: string; // fila de bocas
+  river: string;
+  safe: string; // filas 7 y 13
+  road: string;
+  laneLine: string;
+  mouth: string;
+  mouthBorder: string;
+  cars: [string, string, string];
+  truckTrailer: string;
+  truckCab: string;
+  wheel: string;
+  window: string;
+  log: string;
+  logGrain: string;
+  turtle: string;
+  turtleStroke: string;
+  turtleSunk: string;
+  frog: string;
+  frogOutline: string | null; // neon/retro: contorno de 2 px
+  eye: string;
+  pupil: string;
+  text: string;
+  timeBar: [string, string, string]; // > 50 %, > 25 %, resto
+  glow: number; // shadowBlur de entidades, 0 = sin glow
+  square: boolean; // retro: sin esquinas redondeadas
+};
+const PALETTES: Record<SkinId, Palette> = {
+  clasico: {
+    goal: "#0f3d1c",
+    river: "#0a2a5e",
+    safe: "#14532d",
+    road: "#111118",
+    laneLine: "rgba(255,255,255,0.25)",
+    mouth: "#1d6b2e",
+    mouthBorder: "#d4af37",
+    cars: ["#e63946", "#f4d35e", "#3a86ff"],
+    truckTrailer: "#8d99ae",
+    truckCab: "#e07a1f",
+    wheel: "#000",
+    window: "rgba(180,220,255,0.8)",
+    log: "#7b4a21",
+    logGrain: "#4e2d10",
+    turtle: "#2f9e44",
+    turtleStroke: "#1b6b2c",
+    turtleSunk: "rgba(120,220,140,0.35)",
+    frog: "#4ade80",
+    frogOutline: null,
+    eye: "#fff",
+    pupil: "#000",
+    text: "#fff",
+    timeBar: ["#4ade80", "#facc15", "#ef4444"],
+    glow: 0,
+    square: false,
+  },
+  neon: {
+    goal: "#05050a",
+    river: "#061a38",
+    safe: "#06200f",
+    road: "#0a0a12",
+    laneLine: "#2a2a48",
+    mouth: "#0a2a1a",
+    mouthBorder: "#00ff88",
+    cars: ["#ff006e", "#f5ff00", "#00f5ff"],
+    truckTrailer: "#8a8fb5",
+    truckCab: "#ff7a00",
+    wheel: "#05050a",
+    window: "rgba(230,233,255,0.8)",
+    log: "#9a6420",
+    logGrain: "#4a2e0c",
+    turtle: "#087a85",
+    turtleStroke: "#00f5ff",
+    turtleSunk: "rgba(8,122,133,0.35)",
+    frog: "#00ff88",
+    frogOutline: "#05050a",
+    eye: "#fff",
+    pupil: "#05050a",
+    text: "#e6e9ff",
+    timeBar: ["#00ff88", "#f5ff00", "#ff006e"],
+    glow: 8,
+    square: false,
+  },
+  retro: {
+    goal: "#061406",
+    river: "#14381c",
+    safe: "#0b2410",
+    road: "#061406",
+    laneLine: "#14381c",
+    mouth: "#0b2410",
+    mouthBorder: "#d98a00",
+    cars: ["#33ff66", "#d98a00", "#9be8ae"],
+    truckTrailer: "#1f9a40",
+    truckCab: "#d98a00",
+    wheel: "#061406",
+    window: "#061406",
+    log: "#d98a00",
+    logGrain: "#6b4200",
+    turtle: "#1f9a40",
+    turtleStroke: "#061406",
+    turtleSunk: "rgba(31,154,64,0.35)",
+    frog: "#33ff66",
+    frogOutline: "#061406",
+    eye: "#d8ffd8",
+    pupil: "#061406",
+    text: "#33ff66",
+    timeBar: ["#33ff66", "#d98a00", "#ff5a36"],
+    glow: 0,
+    square: true,
+  },
+};
 export const startFrogger: GameEngine = (
   canvas: HTMLCanvasElement,
   events: EngineEvents,
+  skin: SkinId = "clasico",
 ): EngineHandle => {
   const ctx = canvas.getContext("2d")!;
+  let pal = PALETTES[skin];
   // ── Estado ──────────────────────────────────────────────────────────────────
   let state = "ready" as State;
   let score = 0;
@@ -294,12 +405,12 @@ export const startFrogger: GameEngine = (
       ctx.fillStyle = color;
       ctx.fillRect(0, r0 * CELL, FROGGER_W, (r1 - r0 + 1) * CELL);
     };
-    zone(ROW_GOALS, ROW_GOALS, "#0f3d1c");
-    zone(ROW_RIVER_TOP, ROW_RIVER_BOT, "#0a2a5e");
-    zone(ROW_SAFE_MID, ROW_SAFE_MID, "#14532d");
-    zone(ROW_ROAD_TOP, ROW_ROAD_BOT, "#111118");
-    zone(ROW_START, ROW_START, "#14532d");
-    ctx.strokeStyle = "rgba(255,255,255,0.25)";
+    zone(ROW_GOALS, ROW_GOALS, pal.goal);
+    zone(ROW_RIVER_TOP, ROW_RIVER_BOT, pal.river);
+    zone(ROW_SAFE_MID, ROW_SAFE_MID, pal.safe);
+    zone(ROW_ROAD_TOP, ROW_ROAD_BOT, pal.road);
+    zone(ROW_START, ROW_START, pal.safe);
+    ctx.strokeStyle = pal.laneLine;
     ctx.setLineDash([16, 16]);
     ctx.lineWidth = 2;
     for (let r = ROW_ROAD_TOP + 1; r <= ROW_ROAD_BOT; r++) {
@@ -312,9 +423,9 @@ export const startFrogger: GameEngine = (
     // Bocas destino (tramo inferior de la fila 0; arriba va el HUD)
     for (let i = 0; i < MOUTHS; i++) {
       const x = mouthCol(i) * CELL;
-      ctx.fillStyle = "#1d6b2e";
+      ctx.fillStyle = pal.mouth;
       ctx.fillRect(x, 18, 2 * CELL, CELL - 18);
-      ctx.strokeStyle = "#d4af37";
+      ctx.strokeStyle = pal.mouthBorder;
       ctx.lineWidth = 2;
       ctx.strokeRect(x + 1, 19, 2 * CELL - 2, CELL - 20);
       if (goals[i]) drawFrog(x + CELL, 30, 0, false, 0.7);
@@ -325,23 +436,23 @@ export const startFrogger: GameEngine = (
     const y = row * CELL;
     const w = e.width * CELL;
     if (e.type === "car") {
-      ctx.fillStyle = CAR_COLORS[row % CAR_COLORS.length];
+      ctx.fillStyle = pal.cars[row % pal.cars.length];
       roundRect(x + 3, y + 8, w - 6, 24, 5);
       ctx.fill();
-      ctx.fillStyle = "rgba(180,220,255,0.8)";
+      ctx.fillStyle = pal.window;
       ctx.fillRect(x + (dir > 0 ? w - 17 : 8), y + 12, 9, 16);
     } else {
       const cab = 34;
       const cabX = dir > 0 ? x + w - cab : x + 3;
       const trailerX = dir > 0 ? x + 3 : x + cab;
-      ctx.fillStyle = "#8d99ae";
+      ctx.fillStyle = pal.truckTrailer;
       roundRect(trailerX, y + 6, w - cab - 3, 28, 3);
       ctx.fill();
-      ctx.fillStyle = "#e07a1f";
+      ctx.fillStyle = pal.truckCab;
       roundRect(cabX, y + 8, cab, 24, 4);
       ctx.fill();
     }
-    ctx.fillStyle = "#000";
+    ctx.fillStyle = pal.wheel;
     const wheels = e.type === "car" ? [0.28, 0.72] : [0.15, 0.4, 0.85];
     for (const k of wheels) {
       for (const wy of [y + 8, y + 32]) {
@@ -355,10 +466,10 @@ export const startFrogger: GameEngine = (
     const x = e.col * CELL;
     const y = row * CELL;
     const w = e.width * CELL;
-    ctx.fillStyle = "#7b4a21";
+    ctx.fillStyle = pal.log;
     roundRect(x + 2, y + 6, w - 4, 28, 10);
     ctx.fill();
-    ctx.strokeStyle = "#4e2d10";
+    ctx.strokeStyle = pal.logGrain;
     ctx.lineWidth = 2;
     for (let k = 1; k < e.width * 2; k++) {
       ctx.beginPath();
@@ -374,14 +485,14 @@ export const startFrogger: GameEngine = (
       ctx.beginPath();
       ctx.arc(cx, cy, 15, 0, Math.PI * 2);
       if (e.submerged) {
-        ctx.strokeStyle = "rgba(120,220,140,0.35)";
+        ctx.strokeStyle = pal.turtleSunk;
         ctx.lineWidth = 2;
         ctx.stroke();
         continue;
       }
-      ctx.fillStyle = "#2f9e44";
+      ctx.fillStyle = pal.turtle;
       ctx.fill();
-      ctx.strokeStyle = "#1b6b2c";
+      ctx.strokeStyle = pal.turtleStroke;
       ctx.lineWidth = 2;
       ctx.stroke();
       ctx.beginPath();
@@ -404,7 +515,7 @@ export const startFrogger: GameEngine = (
     ctx.translate(cx, cy);
     ctx.rotate(rot);
     ctx.scale(scale, scale);
-    ctx.fillStyle = "#4ade80";
+    ctx.fillStyle = pal.frog;
     if (jumping) {
       for (const s of [-1, 1]) {
         ctx.beginPath();
@@ -417,11 +528,11 @@ export const startFrogger: GameEngine = (
     ctx.ellipse(0, 0, 14, 12, 0, 0, Math.PI * 2);
     ctx.fill();
     for (const s of [-1, 1]) {
-      ctx.fillStyle = "#fff";
+      ctx.fillStyle = pal.eye;
       ctx.beginPath();
       ctx.arc(s * 6, -8, 4, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = "#000";
+      ctx.fillStyle = pal.pupil;
       ctx.beginPath();
       ctx.arc(s * 6, -9, 1.8, 0, Math.PI * 2);
       ctx.fill();
@@ -430,12 +541,12 @@ export const startFrogger: GameEngine = (
   };
   const drawHud = () => {
     ctx.font = "bold 13px monospace";
-    ctx.fillStyle = "#fff";
+    ctx.fillStyle = pal.text;
     ctx.textAlign = "left";
     ctx.fillText(`PTS ${score}`, 8, 14);
     ctx.textAlign = "center";
     ctx.fillText(`NIVEL ${level}`, FROGGER_W / 2, 14);
-    ctx.fillStyle = "#4ade80";
+    ctx.fillStyle = pal.frog;
     for (let i = 0; i < lives; i++) {
       ctx.beginPath();
       ctx.arc(FROGGER_W - 14 - i * 20, 9, 7, 0, Math.PI * 2);
@@ -443,8 +554,7 @@ export const startFrogger: GameEngine = (
     }
     // Barra de tiempo en el borde inferior (la fila 0 ocupa las bocas)
     const ratio = timeLeft / roundTime(level);
-    ctx.fillStyle =
-      ratio > 0.5 ? "#4ade80" : ratio > 0.25 ? "#facc15" : "#ef4444";
+    ctx.fillStyle = pal.timeBar[ratio > 0.5 ? 0 : ratio > 0.25 ? 1 : 2];
     ctx.fillRect(0, FROGGER_H - 6, FROGGER_W * ratio, 6);
   };
   const draw = () => {
@@ -466,7 +576,7 @@ export const startFrogger: GameEngine = (
       frog.animating,
     );
     if (state === "ready") {
-      ctx.fillStyle = "#fff";
+      ctx.fillStyle = pal.text;
       ctx.font = "20px monospace";
       ctx.textAlign = "center";
       ctx.fillText(
@@ -523,6 +633,9 @@ export const startFrogger: GameEngine = (
   }
   start();
   return {
+    setSkin: (s: SkinId) => {
+      pal = PALETTES[s];
+    },
     pause: stop,
     resume: start,
     end: finish,
