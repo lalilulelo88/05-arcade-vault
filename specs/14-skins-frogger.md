@@ -134,9 +134,15 @@ Glow 8 (color de la entidad) en rana, vehículos, troncos y tortugas; 0 en HUD, 
 | Tronco             | `#d98a00`                            | 4.7 vs río                                                                                                                                                           |
 | Tortuga            | `#1f9a40`                            | 3.6 vs río                                                                                                                                                           |
 | Bocas              | borde `#d98a00` sobre `#0b2410`      | 6.0                                                                                                                                                                  |
-| Barra de tiempo    | `#33ff66` / `#d98a00` / `#ff5a36`    | 14.1 / 6.8 / vs metas se calcula en el paso 6 (>= 3)                                                                                                                 |
+| Barra de tiempo    | `#33ff66` / `#d98a00` / `#ff5a36`    | 14.1 / 6.8 / 6.1 (calculado en el paso 6, >= 3)                                                                                                                      |
 
 Glow 0, `square: true`. Verde/ámbar con el rojo `#ff5a36` solo en la barra crítica. Vehículos verdes vs rana verde sobre la misma carretera: la rana lleva contorno y forma propia (cuerpo + ojos), los coches son rectángulos con ventanilla, y el motor ya los separa por movimiento.
+
+### Resultado de la verificación de contraste (paso 6)
+
+Recalculado con script (fórmula WCAG). Todos los ratios de las tablas anteriores se confirman; la barra crítica de `retro` (`#ff5a36`) da 6.1 contra las metas.
+
+**Excepción documentada:** el criterio "zonas con luminancia ≤ `#1a1a1a`" (0.0103) no se cumple del todo con las paletas definidas: el río de `neon` (`#061a38`) tiene 0.0111 (apenas por encima, sigue siendo casi negro) y el río de `retro` (`#14381c`) tiene 0.0306. En `retro` se mantiene porque es lo que separa el río de la carretera (ratio 1.5); oscurecerlo lo haría indistinguible. Si se prefiere cumplir el criterio al pie de la letra, hay que bajar ese tono y reforzar el patrón de olas.
 
 ---
 
