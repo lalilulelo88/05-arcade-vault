@@ -799,6 +799,26 @@ a {
     radial-gradient(circle at 50% 55%, var(--green) 0 14px, transparent 15px);
   filter: drop-shadow(0 0 8px rgba(0, 255, 136, 0.5));
 }
+.cover-frogger {
+  background: linear-gradient(
+    180deg,
+    #0a2a5e 0 40%,
+    #14532d 40% 50%,
+    #111118 50% 100%
+  );
+}
+.cover-frogger::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(var(--yellow), var(--yellow)) 20% 66%/14% 8% no-repeat,
+    linear-gradient(var(--magenta), var(--magenta)) 68% 82%/12% 8% no-repeat,
+    linear-gradient(#7b4a21, #7b4a21) 12% 18%/28% 9% no-repeat,
+    linear-gradient(#7b4a21, #7b4a21) 58% 28%/24% 9% no-repeat,
+    radial-gradient(circle at 50% 45%, var(--green) 0 13px, transparent 14px);
+  filter: drop-shadow(0 0 8px rgba(0, 255, 136, 0.5));
+}
 .cover-duelo {
   background: #0a0a18;
 }
