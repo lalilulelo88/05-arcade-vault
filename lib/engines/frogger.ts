@@ -60,9 +60,10 @@ const RIVER: LaneDef[] = [
   { row: 5, dir: -1, speed: 2, type: "turtle", width: 2, gap: 3 },
   { row: 6, dir: 1, speed: 3, type: "log", width: 3, gap: 4 },
 ];
+const SPEED_SCALE = 0.5; // multiplicador global sobre las velocidades base
 // Cada nivel sube todas las velocidades un 15 % (acumulativo).
 export function buildLanes(level: number): Lane[] {
-  const factor = 1.15 ** (level - 1);
+  const factor = 1.15 ** (level - 1) * SPEED_SCALE;
   return [...ROAD, ...RIVER].map((d) => {
     const step = d.width + d.gap;
     const count = Math.max(2, Math.ceil(COLS / step));
