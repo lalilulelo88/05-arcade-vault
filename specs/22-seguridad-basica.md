@@ -1,6 +1,6 @@
 # SPEC 22 — Medidas de seguridad básicas (RLS, Auth y headers)
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 > **Depende de:** SPEC 04 (Supabase y `next.config.ts`), SPEC 06 (tabla `scores` y sus políticas) y SPEC 21 (Auth real)
 > **Fecha:** 2026-10-11
 > **Objetivo:** Cerrar los puntos de `references/security/security-checklist.md` (RLS, política de contraseñas, protección anti-bot, funciones `SECURITY DEFINER` y headers HTTP) hasta que `get_advisors` de seguridad no reporte warnings aplicables.
