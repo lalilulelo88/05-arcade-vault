@@ -24,14 +24,19 @@ No hay framework de tests configurado. Un hook `PostToolUse` (`.claude/hooks/for
 
 ## Skills
 
-- Usa siempre /frontend-design para diseñar interfaces de usuario.
-- `/nuevo-juego <carpeta de references/started-games/ o descripción>` (`.claude/skills/nuevo-juego/`, plantilla en `template.md`): genera **solo la spec** (`specs/NN-slug.md`, estado Borrador) de un juego jugable con leaderboard. No escribe código; la implementación se hace luego con `/spec-impl NN-slug`.
-- Agente `game-planner` (`.claude/agents/game-planner.md`): recomienda qué juego añadir y registra lo sugerido en el To Do `references/game-suggestions.md` (su memoria). No escribe código ni specs.
-- Agente `skin-designer` (`.claude/agents/skin-designer.md`): dado UN juego que indiques, audita sus skins neon/retro/clasico legibles en modo oscuro y escribe la spec `specs/NN-skins-<game-id>.md` (Borrador, espera tu revisión) y, **al confirmarla, la pasa a Aprobado y la implementa él mismo** en la rama `spec-NN-skins-<game-id>` (un commit por paso, verifica con tsc/lint/build). Un juego por invocación. Registro de qué juegos ya tienen skins en `references/game-with-themes.md`.
-- Agente `mobile-porter` (`.claude/agents/mobile-porter.md`): dado UN juego con motor, audita su versión móvil (botonera táctil, proporción de pantalla, HUD) tomando como referencia la spec 13, escribe `specs/NN-mobile-<game-id>.md` (Borrador) y, **al confirmarla, la implementa él mismo** en la rama `spec-NN-mobile-<game-id>`. Un juego por invocación; no toca motores.
-- Agente `game-performance-booster` (`.claude/agents/game-performance-booster.md`): dado UN `game.id` con motor, mide ms/frame por skin (método de la spec 16), escribe `specs/NN-perf-<game-id>.md` (Borrador) y, **al confirmarla, aplica él mismo** solo las optimizaciones que la medición justifique en la rama `spec-NN-perf-<game-id>`. Solo rendimiento: no toca velocidades ni jugabilidad.
-- `/spec-impl-game <NN-slug>` (`.claude/skills/spec-impl-game/`): igual que `/spec-impl` (lee y sigue su `SKILL.md`) y, al terminar la implementación del juego, lanza **en secuencia** `skin-designer` y luego `mobile-porter` sobre ese juego, retransmitiendo cada spec en Borrador para tu confirmación.
-- Agente `game-jam` (`.claude/agents/game-jam.md`): dado un tema, inventa un juego y escribe 3 specs incrementales (Borrador) en `specs/game-jam/<game-id>/`. No escribe código.
+- `/frontend-design`: úsala siempre para diseñar interfaces de usuario.
+- `/nuevo-juego <carpeta de references/started-games/ o descripción>`: genera solo la spec (Borrador) de un juego jugable con leaderboard. Definición: `.claude/skills/nuevo-juego/SKILL.md`.
+- `/spec-impl-game <NN-slug>`: como `/spec-impl` y, al terminar, lanza `skin-designer` y luego `mobile-porter` sobre el juego. Definición: `.claude/skills/spec-impl-game/SKILL.md`.
+
+## Agentes
+
+Definición completa de cada uno en `.claude/agents/<nombre>.md`. Los que implementan escriben la spec en Borrador, esperan tu confirmación y trabajan en la rama `spec-NN-...`. Un juego por invocación.
+
+- `game-planner`: recomienda qué juego añadir; lleva el To Do `references/game-suggestions.md`. No escribe código ni specs.
+- `game-jam`: dado un tema, inventa un juego y escribe specs incrementales en `specs/game-jam/<game-id>/`. No escribe código.
+- `skin-designer`: skins neon/retro/clasico de un juego (spec + implementación). Registro en `references/game-with-themes.md`.
+- `mobile-porter`: versión móvil de un juego (botonera táctil, proporción, HUD; spec + implementación). No toca motores.
+- `game-performance-booster`: mide ms/frame por skin de un juego y aplica solo las optimizaciones justificadas (spec + implementación). No toca jugabilidad.
 
 ## Arquitectura
 
@@ -46,8 +51,8 @@ No hay framework de tests configurado. Un hook `PostToolUse` (`.claude/hooks/for
 ### Catálogo y motores de juego
 
 - `lib/games.ts` define el catálogo `GAMES` (datos estáticos). Hay entradas sin motor (gloton, invasores, rocas, ranaria, duelo-pixel) que no se muestran en la biblioteca.
-- `lib/engines/` contiene los motores reales sobre canvas: `asteroids`, `caida` (Tetris, "THETRIS"), `arkanoid` (spritesheet en `public/games/arkanoid`) y `serpentina` (Snake) (ver `references/implemented-games.md`) cuando se necesite implementar. `ENGINES` (`lib/engines/index.ts`) mapea `game.id` → `EngineEntry` `{ start, width, height }` (resolución interna del canvas). Contrato en `lib/engines/types.ts`: `GameEngine = (canvas, events) => { pause, resume, end, destroy }`, con eventos `onScore/onLives/onLevel/onGameOver`; el estado vive en el closure del motor, sin estado de módulo.
-- `components/game-player.tsx` es el único consumidor: si hay motor para el juego lo ejecuta en un `<canvas>` con el tamaño del motor; si no, cae a una simulación con `setInterval`. Al terminar permite "GUARDAR PUNTUACIÓN" (insert en `scores`). Para añadir un juego jugable: usar `/nuevo-juego`, luego motor en `lib/engines/`, registrarlo en `ENGINES` y tener la entrada en `GAMES`. `/games` y `components/library.tsx` filtran el catálogo por `id in ENGINES`.
+- `lib/engines/` contiene los motores reales sobre canvas: `asteroids`, `caida` (Tetris, "THETRIS", archivo `tetris.ts`), `arkanoid` (spritesheet en `public/games/arkanoid`), `serpentina` (Snake) y `frogger`. `ENGINES` (`lib/engines/index.ts`) mapea `game.id` → `EngineEntry` `{ start, width, height }` (resolución interna del canvas). Contrato en `lib/engines/types.ts`: `GameEngine = (canvas, events) => { pause, resume, end, destroy }`, con eventos `onScore/onLives/onLevel/onGameOver`; el estado vive en el closure del motor, sin estado de módulo.
+- `components/game-player.tsx` es el único consumidor: si hay motor para el juego lo ejecuta en un `<canvas>` con el tamaño del motor; si no, cae a una simulación con `setInterval`. En móvil muestra la botonera de `components/touch-controls.tsx`. Al terminar permite "GUARDAR PUNTUACIÓN" (insert en `scores`). Para añadir un juego jugable: usar `/nuevo-juego`, luego motor en `lib/engines/`, registrarlo en `ENGINES` y tener la entrada en `GAMES`. `/games` y `components/library.tsx` filtran el catálogo por `id in ENGINES`.
 - Leaderboard: tabla `scores` (`game_id` → `games.id`, `name`, `score`, `created_at`) con tipos en `lib/supabase/database.types.ts`. `lib/scores.ts` (server) expone `getBestScores` y `getGameBoard`; `components/hall-of-fame.tsx` y `game-player.tsx` usan el cliente de navegador.
 
 ### Sesión y Supabase

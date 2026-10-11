@@ -5,9 +5,10 @@ Juegos con motor real en `lib/engines/` (registrados en `ENGINES`) y registro en
 | id           | Título     | Motor                            | Canvas  |
 | ------------ | ---------- | -------------------------------- | ------- |
 | `asteroids`  | ASTEROIDS  | `lib/engines/asteroids`          | 800×600 |
-| `caida`      | THETRIS    | `lib/engines/caida` (Tetris)     | 480×600 |
+| `caida`      | THETRIS    | `lib/engines/tetris` (Tetris)    | 480×600 |
 | `arkanoid`   | ARKANOID   | `lib/engines/arkanoid`           | 800×600 |
 | `serpentina` | SERPENTINA | `lib/engines/serpentina` (Snake) | 800×800 |
+| `frogger`    | FROGGER    | `lib/engines/frogger`            | 640×560 |
 
 ## En la base de datos pero sin motor (no implementados)
 
