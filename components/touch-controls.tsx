@@ -37,6 +37,12 @@ const PADS: Record<string, PadButton[]> = {
     arrow("Down", "▼", "Abajo"),
     RIGHT,
   ],
+  frogger: [
+    arrow("Up", "▲", "Arriba"),
+    LEFT,
+    arrow("Down", "▼", "Abajo"),
+    RIGHT,
+  ],
   caida: [
     { ...LEFT, repeat: true },
     { ...RIGHT, repeat: true },

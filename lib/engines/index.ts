@@ -1,5 +1,6 @@
 import { startArkanoid } from "./arkanoid";
 import { startAsteroids } from "./asteroids";
+import { FROGGER_H, FROGGER_W, startFrogger } from "./frogger";
 import { startSerpentina } from "./serpentina";
 import { startTetris } from "./tetris";
 import type { EngineEntry } from "./types";
@@ -8,4 +9,5 @@ export const ENGINES: Record<string, EngineEntry> = {
   caida: { start: startTetris, width: 480, height: 600 },
   arkanoid: { start: startArkanoid, width: 800, height: 600 },
   serpentina: { start: startSerpentina, width: 800, height: 800 },
+  frogger: { start: startFrogger, width: FROGGER_W, height: FROGGER_H },
 };
