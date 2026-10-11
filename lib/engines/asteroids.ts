@@ -76,6 +76,26 @@ export const startAsteroids: GameEngine = (
     ctx.shadowColor = color;
     ctx.shadowBlur = blur;
   };
+  // Sprites con glow (neón) rasterizados una vez: shadowBlur por entidad y frame es el coste (spec 17)
+  let spriteCache = new WeakMap<object, HTMLCanvasElement>();
+  const BULLET_KEY = {};
+  const POWERUP_KEY = {};
+  const spriteOf = (
+    key: object,
+    half: number,
+    paint: (c: CanvasRenderingContext2D) => void,
+  ) => {
+    let s = spriteCache.get(key);
+    if (!s) {
+      s = document.createElement("canvas");
+      s.width = s.height = Math.ceil(half * 2);
+      const c = s.getContext("2d")!;
+      c.translate(s.width / 2, s.height / 2);
+      paint(c);
+      spriteCache.set(key, s);
+    }
+    return s;
+  };
   // ── Input ───────────────────────────────────────────────────────────────────
   const keys: Record<string, boolean> = {};
   const justPressed: Record<string, boolean> = {};
@@ -127,6 +147,22 @@ export const startAsteroids: GameEngine = (
       if (this.ttl <= 0) this.dead = true;
     }
     draw() {
+      if (pal.glow.bullet > 0) {
+        const h = this.radius + pal.glow.bullet * 2 + 2;
+        ctx.drawImage(
+          spriteOf(BULLET_KEY, h, (c) => {
+            c.fillStyle = pal.bullet;
+            c.shadowColor = pal.bullet;
+            c.shadowBlur = pal.glow.bullet;
+            c.beginPath();
+            c.arc(0, 0, this.radius, 0, Math.PI * 2);
+            c.fill();
+          }),
+          this.x - h,
+          this.y - h,
+        );
+        return;
+      }
       ctx.save();
       ctx.fillStyle = pal.bullet;
       glow(pal.bullet, pal.glow.bullet);
@@ -181,6 +217,28 @@ export const startAsteroids: GameEngine = (
       ];
     }
     draw() {
+      if (pal.glow.asteroid > 0) {
+        const h = this.radius + pal.glow.asteroid * 2 + pal.lineWidth + 2;
+        const img = spriteOf(this, h, (c) => {
+          c.strokeStyle = pal.asteroid;
+          c.shadowColor = pal.asteroid;
+          c.shadowBlur = pal.glow.asteroid;
+          c.lineWidth = pal.lineWidth;
+          c.lineJoin = "round";
+          c.beginPath();
+          c.moveTo(this.verts[0][0], this.verts[0][1]);
+          for (let i = 1; i < this.verts.length; i++)
+            c.lineTo(this.verts[i][0], this.verts[i][1]);
+          c.closePath();
+          c.stroke();
+        });
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.rot);
+        ctx.drawImage(img, -img.width / 2, -img.height / 2);
+        ctx.restore();
+        return;
+      }
       ctx.save();
       ctx.translate(snap(this.x), snap(this.y));
       ctx.rotate(this.rot);
@@ -222,16 +280,39 @@ export const startAsteroids: GameEngine = (
     draw() {
       if (this.ttl < 2 && Math.floor(this.ttl * 8) % 2 === 0) return;
       const pulse = 0.85 + Math.sin(performance.now() / 150) * 0.15;
-      ctx.save();
-      ctx.translate(snap(this.x), snap(this.y));
-      ctx.rotate(Math.PI / 4);
-      ctx.strokeStyle = pal.powerUp;
-      glow(pal.powerUp, pal.glow.powerUp);
-      ctx.lineWidth = 2;
-      ctx.lineJoin = pal.pixel ? "miter" : "round";
-      const r = this.radius * pulse;
-      ctx.strokeRect(-r, -r, r * 2, r * 2);
-      ctx.restore();
+      if (pal.glow.powerUp > 0) {
+        const h = this.radius * 1.42 + pal.glow.powerUp * 2 + 4;
+        const img = spriteOf(POWERUP_KEY, h, (c) => {
+          c.rotate(Math.PI / 4);
+          c.strokeStyle = pal.powerUp;
+          c.shadowColor = pal.powerUp;
+          c.shadowBlur = pal.glow.powerUp;
+          c.lineWidth = 2;
+          c.lineJoin = "round";
+          c.strokeRect(
+            -this.radius,
+            -this.radius,
+            this.radius * 2,
+            this.radius * 2,
+          );
+        });
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.scale(pulse, pulse);
+        ctx.drawImage(img, -img.width / 2, -img.height / 2);
+        ctx.restore();
+      } else {
+        ctx.save();
+        ctx.translate(snap(this.x), snap(this.y));
+        ctx.rotate(Math.PI / 4);
+        ctx.strokeStyle = pal.powerUp;
+        glow(pal.powerUp, pal.glow.powerUp);
+        ctx.lineWidth = 2;
+        ctx.lineJoin = pal.pixel ? "miter" : "round";
+        const r = this.radius * pulse;
+        ctx.strokeRect(-r, -r, r * 2, r * 2);
+        ctx.restore();
+      }
       ctx.fillStyle = pal.powerUp; // texto sin glow
       ctx.font = "bold 12px monospace";
       ctx.textAlign = "center";
@@ -306,19 +387,33 @@ export const startAsteroids: GameEngine = (
       ctx.translate(snap(this.x), snap(this.y));
       ctx.rotate(this.angle);
       ctx.strokeStyle = pal.ship;
-      glow(pal.ship, pal.glow.ship);
       ctx.lineWidth = pal.lineWidth;
       ctx.lineJoin = pal.pixel ? "miter" : "round";
       // Silueta clásica: triángulo con muesca trasera
-      ctx.beginPath();
-      ctx.moveTo(20, 0); // nariz
-      ctx.lineTo(-12, -9); // ala izquierda
-      ctx.lineTo(-7, 0); // muesca trasera
-      ctx.lineTo(-12, 9); // ala derecha
-      ctx.closePath();
-      ctx.stroke();
+      const body = (c: CanvasRenderingContext2D) => {
+        c.beginPath();
+        c.moveTo(20, 0); // nariz
+        c.lineTo(-12, -9); // ala izquierda
+        c.lineTo(-7, 0); // muesca trasera
+        c.lineTo(-12, 9); // ala derecha
+        c.closePath();
+        c.stroke();
+      };
+      if (pal.glow.ship > 0) {
+        const h = 20 + pal.glow.ship * 2 + pal.lineWidth + 2;
+        const img = spriteOf(this, h, (c) => {
+          c.strokeStyle = pal.ship;
+          c.shadowColor = pal.ship;
+          c.shadowBlur = pal.glow.ship;
+          c.lineWidth = pal.lineWidth;
+          c.lineJoin = "round";
+          body(c);
+        });
+        ctx.drawImage(img, -img.width / 2, -img.height / 2);
+      } else {
+        body(ctx);
+      }
       // Llama del propulsor (sin glow)
-      ctx.shadowBlur = 0;
       if (this.thrusting && Math.random() > 0.35) {
         ctx.beginPath();
         ctx.moveTo(-8, -4);
@@ -548,6 +643,7 @@ export const startAsteroids: GameEngine = (
     },
     setSkin: (next) => {
       pal = PALETTES[next] ?? PALETTES.clasico;
+      spriteCache = new WeakMap();
     },
     destroy: () => {
       stop();
