@@ -1,6 +1,6 @@
 # SPEC 14 — Skins de FROGGER (clasico, neon, retro)
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 > **Depende de:** `specs/game-jam/frogger/01-frogger-core.md` (motor Frogger) y SPEC 10 (patrón de skins: `SkinId`, `skin?`/`setSkin?` en el contrato y selector en `GamePlayer`)
 > **Fecha:** 2026-10-10
 > **Objetivo:** Añadir tres skins al motor `frogger` (`clasico` por defecto, `neon` y `retro`), legibles en modo oscuro con contraste WCAG verificado, reutilizando el selector de skin del reproductor (persistido en `localStorage`).
