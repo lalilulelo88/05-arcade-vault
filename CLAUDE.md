@@ -36,6 +36,7 @@ Definición completa de cada uno en `.claude/agents/<nombre>.md`. Los que implem
 - `game-jam`: dado un tema, inventa un juego y escribe specs incrementales en `specs/game-jam/<game-id>/`. No escribe código.
 - `skin-designer`: skins neon/retro/clasico de un juego (spec + implementación). Registro en `references/game-with-themes.md`.
 - `mobile-porter`: versión móvil de un juego (botonera táctil, proporción, HUD; spec + implementación). No toca motores.
+- `security-auditor`: audita la seguridad de la BD (RLS, políticas, advisors, grants) y de la app (secretos, Auth, headers, Server Actions, dependencias) contra las specs 21 y 22. Informa por defecto; solo corrige tras spec aprobada.
 - `game-performance-booster`: mide ms/frame por skin de un juego y aplica solo las optimizaciones justificadas (spec + implementación). No toca jugabilidad.
 
 ## Arquitectura
