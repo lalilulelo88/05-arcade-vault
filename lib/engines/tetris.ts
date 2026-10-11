@@ -350,29 +350,34 @@ export const startTetris: GameEngine = (
     ctx.textBaseline = "alphabetic";
     ctx.fillText(text, PANEL_X, y);
   };
+  // Cuadrícula y borde del tablero: estáticos, se rasterizan una sola vez.
+  const gridCache = document.createElement("canvas");
+  gridCache.width = BOARD_W + 1;
+  gridCache.height = H;
+  const g = gridCache.getContext("2d")!;
+  g.strokeStyle = "rgba(255,255,255,0.08)";
+  g.lineWidth = 0.5;
+  for (let c = 1; c < COLS; c++) {
+    g.beginPath();
+    g.moveTo(c * BLOCK, 0);
+    g.lineTo(c * BLOCK, H);
+    g.stroke();
+  }
+  for (let r = 1; r < ROWS; r++) {
+    g.beginPath();
+    g.moveTo(0, r * BLOCK);
+    g.lineTo(BOARD_W, r * BLOCK);
+    g.stroke();
+  }
+  g.strokeStyle = "rgba(0,245,255,0.35)";
+  g.lineWidth = 1;
+  g.beginPath();
+  g.moveTo(BOARD_W + 0.5, 0);
+  g.lineTo(BOARD_W + 0.5, H);
+  g.stroke();
   const draw = () => {
     ctx.clearRect(0, 0, W, H);
-    // cuadrícula y borde del tablero
-    ctx.strokeStyle = "rgba(255,255,255,0.08)";
-    ctx.lineWidth = 0.5;
-    for (let c = 1; c < COLS; c++) {
-      ctx.beginPath();
-      ctx.moveTo(c * BLOCK, 0);
-      ctx.lineTo(c * BLOCK, H);
-      ctx.stroke();
-    }
-    for (let r = 1; r < ROWS; r++) {
-      ctx.beginPath();
-      ctx.moveTo(0, r * BLOCK);
-      ctx.lineTo(BOARD_W, r * BLOCK);
-      ctx.stroke();
-    }
-    ctx.strokeStyle = "rgba(0,245,255,0.35)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(BOARD_W + 0.5, 0);
-    ctx.lineTo(BOARD_W + 0.5, H);
-    ctx.stroke();
+    ctx.drawImage(gridCache, 0, 0); // cuadrícula y borde del tablero
     // tablero, ghost y pieza actual
     board.forEach((row, r) => row.forEach((v, c) => drawBlock(c, r, v)));
     const gy = ghostY();

@@ -155,6 +155,31 @@ export const startSerpentina: GameEngine = (
   let prev = snake; // posiciones del tick anterior, para interpolar
   let fruit: { cell: Cell; key: FruitKey } | null = null;
   let lastScore = -1;
+  // Halos de glow prerrenderizados (disco con shadowBlur) y sprite de la fruta con glow;
+  // se invalidan en setSkin para no pagar shadowBlur en cada frame
+  let halo: {
+    body: HTMLCanvasElement;
+    head: HTMLCanvasElement;
+    pad: number;
+  } | null = null;
+  let fruitSprite: { canvas: HTMLCanvasElement; pad: number } | null = null;
+  let fruitSpriteFor: object | null = null;
+  const buildHalo = () => {
+    const pad = Math.ceil(pal.glow * 2);
+    const disc = (r: number) => {
+      const c = document.createElement("canvas");
+      c.width = c.height = Math.ceil(2 * (r + pad));
+      const g = c.getContext("2d")!;
+      g.shadowColor = pal.glowColor;
+      g.shadowBlur = pal.glow;
+      g.fillStyle = pal.glowColor;
+      g.beginPath();
+      g.arc(c.width / 2, c.height / 2, r, 0, Math.PI * 2);
+      g.fill();
+      return c;
+    };
+    halo = { body: disc(BODY_R), head: disc(HEAD_R), pad };
+  };
   // Silueta monocroma del spritesheet (retro); se descarta si el skin no la usa
   const buildTint = () => {
     if (pal.fruitTint === null || !loaded) {
@@ -243,12 +268,15 @@ export const startSerpentina: GameEngine = (
       const f = i / Math.max(1, pts.length - 1);
       return pal.body(f, i);
     };
+    if (pal.glow > 0 && !halo) buildHalo();
     ctx.save();
-    ctx.shadowColor = pal.glowColor;
-    ctx.shadowBlur = pal.glow;
     ctx.lineCap = "round";
     for (let i = pts.length - 1; i >= 0; i--) {
       const r = i === 0 ? HEAD_R : BODY_R;
+      if (pal.glow > 0 && halo) {
+        const hs = i === 0 ? halo.head : halo.body;
+        ctx.drawImage(hs, pts[i].x - hs.width / 2, pts[i].y - hs.height / 2);
+      }
       ctx.fillStyle = color(i);
       if (pal.square)
         ctx.fillRect(q2(pts[i].x - r), q2(pts[i].y - r), 2 * r, 2 * r);
@@ -273,6 +301,14 @@ export const startSerpentina: GameEngine = (
             Math.abs(next.y - pts[i].y) + 2 * BODY_R,
           );
           continue;
+        }
+        if (halo) {
+          // El conector también proyectaba sombra: halo en su punto medio
+          ctx.drawImage(
+            halo.body,
+            (pts[i].x + next.x) / 2 - halo.body.width / 2,
+            (pts[i].y + next.y) / 2 - halo.body.height / 2,
+          );
         }
         ctx.strokeStyle = color(i);
         ctx.lineWidth = BODY_R * 2;
@@ -316,23 +352,26 @@ export const startSerpentina: GameEngine = (
       const s = FRUITS[fruit.key];
       const dh = FRUIT_H;
       const dw = (s.w * dh) / s.h;
+      const dx = fruit.cell.x * CELL + (CELL - dw) / 2;
+      const dy = fruit.cell.y * CELL + (CELL - dh) / 2;
       ctx.save();
-      if (pal.fruitGlow > 0) {
-        ctx.shadowColor = pal.fruitGlowColor;
-        ctx.shadowBlur = pal.fruitGlow;
-      }
       ctx.imageSmoothingEnabled = pal.fruitTint === null;
-      ctx.drawImage(
-        tint ?? img,
-        s.x,
-        s.y,
-        s.w,
-        s.h,
-        fruit.cell.x * CELL + (CELL - dw) / 2,
-        fruit.cell.y * CELL + (CELL - dh) / 2,
-        dw,
-        dh,
-      );
+      if (pal.fruitGlow > 0) {
+        if (fruitSpriteFor !== fruit) {
+          const pad = Math.ceil(pal.fruitGlow * 2);
+          const c = document.createElement("canvas");
+          c.width = Math.ceil(dw) + 2 * pad;
+          c.height = dh + 2 * pad;
+          const g = c.getContext("2d")!;
+          g.shadowColor = pal.fruitGlowColor;
+          g.shadowBlur = pal.fruitGlow;
+          g.drawImage(tint ?? img, s.x, s.y, s.w, s.h, pad, pad, dw, dh);
+          fruitSprite = { canvas: c, pad };
+          fruitSpriteFor = fruit;
+        }
+        const fs = fruitSprite!;
+        ctx.drawImage(fs.canvas, dx - fs.pad, dy - fs.pad);
+      } else ctx.drawImage(tint ?? img, s.x, s.y, s.w, s.h, dx, dy, dw, dh);
       ctx.restore();
     }
     drawSnake();
@@ -414,6 +453,9 @@ export const startSerpentina: GameEngine = (
   return {
     setSkin: (s: SkinId) => {
       pal = PALETTES[s];
+      halo = null;
+      fruitSprite = null;
+      fruitSpriteFor = null;
       buildTint();
     },
     pause: () => {
