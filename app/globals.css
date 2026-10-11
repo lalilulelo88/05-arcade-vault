@@ -2827,6 +2827,9 @@ a {
   .av-player[data-game="caida"] {
     --pad-h: 134px;
   }
+  .av-player[data-game="frogger"] {
+    --pad-h: 122px;
+  }
   .crt {
     padding: 10px;
     border-radius: 18px;
@@ -2866,7 +2869,8 @@ a {
     -webkit-user-select: none;
     -webkit-touch-callout: none;
   }
-  .touch-pad[data-game="serpentina"] {
+  .touch-pad[data-game="serpentina"],
+  .touch-pad[data-game="frogger"] {
     justify-content: center;
   }
   .tc-move,
@@ -2874,28 +2878,37 @@ a {
     display: flex;
     gap: 8px;
   }
-  .touch-pad[data-game="serpentina"] .tc-move {
+  .touch-pad[data-game="serpentina"] .tc-move,
+  .touch-pad[data-game="frogger"] .tc-move {
     display: grid;
     grid-template-columns: repeat(3, 52px);
     grid-auto-rows: 52px;
     gap: 4px;
     grid-template-areas: ". u ." "l . r" ". d .";
   }
-  .touch-pad[data-game="serpentina"] .tc-btn {
+  .touch-pad[data-game="serpentina"] .tc-btn,
+  .touch-pad[data-game="frogger"] .tc-btn {
     min-width: 0;
     min-height: 0;
   }
-  .touch-pad[data-game="serpentina"] [data-code="ArrowUp"] {
+  .touch-pad[data-game="serpentina"] [data-code="ArrowUp"],
+  .touch-pad[data-game="frogger"] [data-code="ArrowUp"] {
     grid-area: u;
   }
-  .touch-pad[data-game="serpentina"] [data-code="ArrowLeft"] {
+  .touch-pad[data-game="serpentina"] [data-code="ArrowLeft"],
+  .touch-pad[data-game="frogger"] [data-code="ArrowLeft"] {
     grid-area: l;
   }
-  .touch-pad[data-game="serpentina"] [data-code="ArrowRight"] {
+  .touch-pad[data-game="serpentina"] [data-code="ArrowRight"],
+  .touch-pad[data-game="frogger"] [data-code="ArrowRight"] {
     grid-area: r;
   }
-  .touch-pad[data-game="serpentina"] [data-code="ArrowDown"] {
+  .touch-pad[data-game="serpentina"] [data-code="ArrowDown"],
+  .touch-pad[data-game="frogger"] [data-code="ArrowDown"] {
     grid-area: d;
+  }
+  .touch-pad[data-game="frogger"] .tc-move {
+    grid-template-areas: ". u ." "l d r";
   }
   .tc-btn {
     min-width: 56px;
