@@ -52,7 +52,7 @@ No hay framework de tests configurado. Un hook `PostToolUse` (`.claude/hooks/for
 
 ### Sesión y Supabase
 
-- `components/session-provider.tsx`: sesión de cliente basada en `localStorage` (`av_user`), invitado hasta montar. Todavía no es auth real de Supabase.
-- `lib/supabase/client.ts` (navegador) y `lib/supabase/server.ts` (server, cookies vía `@supabase/ssr`). `supabaseEnv()` lanza error si faltan las variables; las referencias a `process.env.NEXT_PUBLIC_*` deben ser literales para que Next las inyecte. Aún no existe `proxy.ts` (refresco de sesión).
+- Auth real de Supabase (correo + contraseña, confirmación por correo vía `verifyOtp`; spec 21). `components/session-provider.tsx` expone `useSession()` → `{ user, signOut }` desde la sesión de Supabase (invitado hasta montar); `user.name` = `user_metadata.username` en mayúsculas. Rutas `/auth` (login/registro, `components/auth-form.tsx`), `/auth/callback` (Route Handler), `/auth/recuperar` y `/auth/restablecer` (`components/password-forms.tsx`). Ninguna ruta exige login; se mantiene el modo invitado.
+- `lib/supabase/client.ts` (navegador) y `lib/supabase/server.ts` (server, cookies vía `@supabase/ssr`). `supabaseEnv()` lanza error si faltan las variables; las referencias a `process.env.NEXT_PUBLIC_*` deben ser literales para que Next las inyecte. `proxy.ts` (raíz) refresca la sesión por cookies en cada petición y no protege rutas.
 - Variables en `.env.local` (plantilla: `.env.example`): `RESEND_API_KEY`, `CONTACT_TO_EMAIL`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Nunca uses `service_role` en el cliente.
 - `.mcp.json` conecta el MCP de Supabase al proyecto; úsalo para inspeccionar tablas/migraciones antes de cambiar el esquema.
