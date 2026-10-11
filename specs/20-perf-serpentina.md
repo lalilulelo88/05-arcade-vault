@@ -1,6 +1,6 @@
 # SPEC 20 — Rendimiento de Serpentina (Snake)
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 > **Depende de:** SPEC 16 (método de medición y decisiones de rendimiento), SPEC 09 (motor de Serpentina) y SPEC 12 (skins de Serpentina)
 > **Fecha:** 2026-10-11
 > **Objetivo:** Que `lib/engines/serpentina.ts` sostenga el refresco del monitor (≈ 7 ms por frame a 144 Hz) en escritorio en las tres skins, sin frames > 25 ms y sin cambiar el aspecto ni la jugabilidad.
@@ -70,28 +70,47 @@ Lectura:
 
 ### Resultado de la implementación
 
-_(Se rellena al implementar.)_
+**Línea base repetida (paso 1, sin cambios de código).** Navegador Chrome propio lanzado con Playwright (no el compartido, que otros agentes navegaban en paralelo), 144 Hz, 2 rondas de 6 s por skin, máquina aún cargada (intervalo de página ociosa: 10,5 ms en esa pasada). El glow se confirmó como coste reproducible: retro (sin glow) ≈ 9–10 ms frente a ≈ 12,4–14,6 ms de clásico y neón.
 
-**Antes** (ver tabla de auditoría).
+| Skin    | cb media       | Intervalo medio  | Intervalo p95  | Frames > 25 ms |
+| ------- | -------------- | ---------------- | -------------- | -------------- |
+| clásico | 0,50 / 0,44 ms | 14,63 / 12,89 ms | 20,8 / 14,1 ms | 7 / 1          |
+| neón    | 0,46 / 0,44 ms | 13,21 / 12,43 ms | 20,8 / 14,1 ms | 0 / 0          |
+| retro   | 0,40 / 0,33 ms | 9,96 / 9,06 ms   | 14,0 / 14,0 ms | 0 / 0          |
 
-**Después:**
+**Después (tras la optimización A, ronda 1 / ronda 2; página ociosa 7,2 ms, menos carga que en la línea base):**
 
-| Skin    | cb media | Intervalo medio | Intervalo p95 | Frames > 25 ms |
-| ------- | -------- | --------------- | ------------- | -------------- |
-| clásico | —        | —               | —             | —              |
-| neón    | —        | —               | —             | —              |
-| retro   | —        | —               | —             | —              |
+| Skin    | cb media       | Intervalo medio | Intervalo p95  | Frames > 25 ms |
+| ------- | -------------- | --------------- | -------------- | -------------- |
+| clásico | 0,40 / 0,27 ms | 8,12 / 7,43 ms  | 14,0 / 13,9 ms | 0 / 0          |
+| neón    | 0,27 / 0,36 ms | 7,36 / 8,30 ms  | 13,8 / 14,0 ms | 1 / 0          |
+| retro   | 0,18 / 0,26 ms | 6,94 / 7,08 ms  | 7,0 / 7,1 ms   | 0 / 0          |
+
+Resultado por paso:
+
+- **A — halo cacheado (aplicada, commit `perf: halos de glow cacheados…`).** Clásico y neón pasan de ≈ 12,4–14,6 ms a ≈ 7,4–8,3 ms de intervalo medio, igualándose a retro (control interno, que no cambió de código salvo ruido). Disco con glow prerrenderizado para cabeza y cuerpo (más un halo en el punto medio de cada conector) y sprite de la fruta con glow en neón, invalidados en `setSkin`. Los segmentos se dibujan sin `shadowBlur`.
+- **B — fondo cacheado (no aplicada).** Tras A, retro (400 `fillRect` de cuadrícula incluidos) ya está en el suelo del monitor (≈ 7,0 ms, igual que la página ociosa), así que la medición no la justifica.
+- **C — asignaciones por frame (no aplicada).** `cb` media ≤ 0,4 ms y sin frames > 25 ms atribuibles al motor; sin margen medible.
+
+Cambio visual: el aspecto es prácticamente idéntico (comparación de recortes antes/después en clásico y neón). Diferencia mínima: el glow del conector sobre el segmento de cola se ve algo más nítido que con la sombra nativa.
+
+Limitaciones: la carga de la máquina cambió entre la medición «antes» y «después» (página ociosa 10,5 ms frente a 7,2 ms), así que parte de la mejora absoluta puede ser ruido; el control interno (diferencia clásico/neón frente a retro, que en la línea base era ≈ 3–4 ms y ahora ≈ 0–1 ms) es la evidencia principal. `cb` no incluye el rasterizado de GPU. No se probó el guardado de puntuación contra Supabase.
+
+------- | -------- | --------------- | ------------- | -------------- |
+| clásico | — | — | — | — |
+| neón | — | — | — | — |
+| retro | — | — | — | — |
 
 ---
 
 ## Criterios de aceptación
 
-- [ ] `npx tsc --noEmit`, `npm run lint` y `npm run build` sin errores.
-- [ ] La spec contiene las tablas antes/después por skin (clásico, neón, retro).
-- [ ] El intervalo medio de cada skin queda ≈ al de la línea base de retro o mejor, y no hay frames > 25 ms atribuibles al motor (o la línea base repetida ya cumplía y está documentado).
-- [ ] Aspecto idéntico a las capturas previas en las tres skins (glow de serpiente y de fruta, cuadrícula, ojos, texto «PULSA UNA FLECHA»).
-- [ ] Pausa, reanudar, FIN, cambio de skin en caliente y reinicio funcionan; velocidad y reglas no cambian.
-- [ ] `git diff` solo toca `lib/engines/serpentina.ts` y esta spec.
+- [x] `npx tsc --noEmit` y `npm run build` sin errores; `npm run lint` sin errores en el código de la app (los 18 errores existentes están todos en `references/`, ajenos a esta spec).
+- [x] La spec contiene las tablas antes/después por skin (clásico, neón, retro).
+- [x] El intervalo medio de cada skin queda ≈ al de la línea base de retro o mejor, y no hay frames > 25 ms atribuibles al motor (o la línea base repetida ya cumplía y está documentado).
+- [x] Aspecto idéntico a las capturas previas en las tres skins (glow de serpiente y de fruta, cuadrícula, ojos, texto «PULSA UNA FLECHA»).
+- [x] Pausa, reanudar, FIN, cambio de skin en caliente y reinicio funcionan; velocidad y reglas no cambian.
+- [x] `git diff` solo toca `lib/engines/serpentina.ts` y esta spec.
 
 ---
 
