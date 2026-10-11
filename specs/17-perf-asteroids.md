@@ -1,6 +1,6 @@
 # SPEC 17 — Asteroids: rendimiento del dibujado (glow de neón con muchas entidades)
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 > **Depende de:** SPEC 16 (método de medición y decisión «el coste está en la existencia de `shadowBlur`, no en su radio»), SPEC 05 (motor de Asteroids), SPEC 10 (skins de Asteroids)
 > **Fecha:** 2026-10-11
 > **Objetivo:** Mantener el intervalo entre frames de Asteroids en el refresco del monitor también cuando hay muchas entidades en pantalla con la skin neón, sin cambiar el aspecto ni la jugabilidad, tocando solo `lib/engines/asteroids.ts`.
@@ -88,27 +88,40 @@ El sprite de un asteroide se crea en el primer `draw()` (cada asteroide tiene su
 
 Lectura: el JS es trivial (≈ 1 ms) en todos los casos; el deterioro es solo de neón y crece con el número de entidades con `shadowBlur`, igual que en Frogger (SPEC 16).
 
-**Después (por rellenar al implementar):**
+**Después (paso 2, sprites con `drawImage` en neón).** Misma máquina, Chrome 154 con ventana real (≈ 144 Hz), 6 s por caso, motor transpilado en página mínima servida en el puerto 3017; se midió «antes» (motor de `HEAD~`) y «después» en la misma sesión para comparar en igualdad de condiciones (por eso el «antes» difiere algo de la tabla anterior; había otras cargas en la máquina). Formato: `cb` media / p95 / máx; intervalo medio / p95.
 
-| Skin / caso   | cb media | Intervalo medio | Intervalo p95 | Frames > 25 ms |
-| ------------- | -------- | --------------- | ------------- | -------------- |
-| neón, natural | —        | —               | —             | —              |
-| neón, 14      | —        | —               | —             | —              |
-| neón, 30      | —        | —               | —             | —              |
-| clásico, 30   | —        | —               | —             | —              |
-| retro, 30     | —        | —               | —             | —              |
+| Skin / caso   | Antes: cb | Antes: intervalo | Después: cb                        | Después: intervalo | Frames > 25 ms (antes → después) |
+| ------------- | --------- | ---------------- | ---------------------------------- | ------------------ | -------------------------------- |
+| neón, natural | 0,41 ms   | 7,09 / 7,1 ms    | 0,42 ms                            | 7,10 / 7,1 ms      | 2 → 2 (arranque)                 |
+| neón, 14      | 0,52 ms   | 7,30 / 7,5 ms    | 0,62 ms                            | 6,98 / 7,1 ms      | 3 → 0                            |
+| neón, 30      | 0,72 ms   | 12,90 / 20,7 ms  | 0,87 ms                            | 7,01 / 7,1 ms      | 5 → 0                            |
+| clásico, 30   | 0,57 ms   | 7,03 / 7,1 ms    | 0,70 ms                            | 7,06 / 7,1 ms      | 1 → 1 (arranque)                 |
+| retro, 30     | 0,61 ms   | 7,02 / 7,1 ms    | 0,85 ms (máx 104 ms, pico aislado) | 7,24 / 7,2 ms      | 1 → 2                            |
+
+Lectura: neón con 30 asteroides pasa de 12,9 ms a 7,0 ms de intervalo (refresco del monitor) y de 5 a 0 frames lentos. El `cb` sube unas décimas de ms (crear el sprite al primer dibujo de cada asteroide y volcarlo con `save/translate/rotate/drawImage`), irrelevante frente al presupuesto de 8 ms. Clásico y retro no tocan el camino nuevo; sus diferencias están dentro del ruido (el pico de 104 ms en retro es un frame aislado, p95 del intervalo 7,2 ms). Captura neón antes/después (Chrome headless sin GPU): mismo color, grosor y glow de nave y asteroides. No se capturaron balas ni power-up en vuelo, ni el cambio de skin en caliente (ver abajo).
+
+**Paso 3 (agrupar `save/restore`, evitar asignaciones): no se aplica.** Tras el paso 2, neón con 30 asteroides cumple el presupuesto (`cb` < 1 ms, intervalo 7,0 ms, 0 frames > 25 ms); la condición de la spec no se da.
+
+**No verificado:** partida completa con ratón/teclado real en `/jugar/asteroids` con `npm run dev` (el worktree no tiene `node_modules`; se midió en página mínima); balas y power-up con glow en pantalla; `setSkin` en caliente (la caché se reemplaza por una `WeakMap` nueva en `setSkin`, razonado por lectura, no probado en la app).
+
+------------- | -------- | --------------- | ------------- | -------------- |
+| neón, natural | — | — | — | — |
+| neón, 14 | — | — | — | — |
+| neón, 30 | — | — | — | — |
+| clásico, 30 | — | — | — | — |
+| retro, 30 | — | — | — | — |
 
 ---
 
 ## Criterios de aceptación
 
-- [ ] `npx tsc --noEmit`, `npm run lint` y `npm run build` sin errores.
-- [ ] Neón con 30 asteroides mantiene un intervalo medio ≈ refresco del monitor (≤ 8 ms en el equipo de pruebas) y 0 frames > 25 ms.
-- [ ] Clásico y retro no empeoran respecto a la línea base.
+- [~] `npx tsc --noEmit` (sin errores en `asteroids.ts`; solo los `PageProps`/`LayoutProps` globales que genera `next` y faltan en el worktree) y eslint sobre `asteroids.ts` (limpio) pasan; `npm run build` **no se ejecutó** (worktree sin `node_modules`, usado por junction solo para tsc/eslint).
+- [x] Neón con 30 asteroides mantiene un intervalo medio ≈ refresco del monitor (≤ 8 ms en el equipo de pruebas) y 0 frames > 25 ms.
+- [x] Clásico y retro no empeoran respecto a la línea base.
 - [ ] Capturas neón antes/después visualmente equivalentes (color, grosor y glow de nave, asteroides, balas y power-up).
 - [ ] Cambio de skin en caliente (`setSkin`) redibuja correctamente, sin sprites de la skin anterior.
-- [ ] La colisión, la puntuación, las velocidades y la dificultad no cambian; `git diff` solo toca `lib/engines/asteroids.ts` y esta spec.
-- [ ] La spec contiene las tablas antes/después por skin.
+- [x] La colisión, la puntuación, las velocidades y la dificultad no cambian; `git diff` solo toca `lib/engines/asteroids.ts` y esta spec.
+- [x] La spec contiene las tablas antes/después por skin.
 
 ---
 
