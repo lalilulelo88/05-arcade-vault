@@ -152,6 +152,7 @@ type Palette = {
   safe: string; // filas 7 y 13
   road: string;
   laneLine: string;
+  zoneLine: string | null; // línea de 2 px entre zonas
   mouth: string;
   mouthBorder: string;
   cars: [string, string, string];
@@ -180,6 +181,7 @@ const PALETTES: Record<SkinId, Palette> = {
     safe: "#14532d",
     road: "#111118",
     laneLine: "rgba(255,255,255,0.25)",
+    zoneLine: null,
     mouth: "#1d6b2e",
     mouthBorder: "#d4af37",
     cars: ["#e63946", "#f4d35e", "#3a86ff"],
@@ -207,6 +209,7 @@ const PALETTES: Record<SkinId, Palette> = {
     safe: "#06200f",
     road: "#0a0a12",
     laneLine: "#2a2a48",
+    zoneLine: "#1a1a2e",
     mouth: "#0a2a1a",
     mouthBorder: "#00ff88",
     cars: ["#ff006e", "#f5ff00", "#00f5ff"],
@@ -234,6 +237,7 @@ const PALETTES: Record<SkinId, Palette> = {
     safe: "#0b2410",
     road: "#061406",
     laneLine: "#14381c",
+    zoneLine: "#1f9a40",
     mouth: "#0b2410",
     mouthBorder: "#d98a00",
     cars: ["#33ff66", "#d98a00", "#9be8ae"],
@@ -400,6 +404,12 @@ export const startFrogger: GameEngine = (
     ctx.beginPath();
     ctx.roundRect(x, y, w, h, r);
   };
+  // Glow acotado a la entidad: llamar dentro de save()/restore()
+  const glow = (color: string) => {
+    if (pal.glow <= 0) return;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = pal.glow;
+  };
   const drawBackground = () => {
     const zone = (r0: number, r1: number, color: string) => {
       ctx.fillStyle = color;
@@ -420,6 +430,20 @@ export const startFrogger: GameEngine = (
       ctx.stroke();
     }
     ctx.setLineDash([]);
+    if (pal.zoneLine) {
+      ctx.strokeStyle = pal.zoneLine;
+      for (const r of [
+        ROW_RIVER_TOP,
+        ROW_SAFE_MID + 1,
+        ROW_ROAD_TOP,
+        ROW_START,
+      ]) {
+        ctx.beginPath();
+        ctx.moveTo(0, r * CELL);
+        ctx.lineTo(FROGGER_W, r * CELL);
+        ctx.stroke();
+      }
+    }
     // Bocas destino (tramo inferior de la fila 0; arriba va el HUD)
     for (let i = 0; i < MOUTHS; i++) {
       const x = mouthCol(i) * CELL;
@@ -435,6 +459,8 @@ export const startFrogger: GameEngine = (
     const x = e.col * CELL;
     const y = row * CELL;
     const w = e.width * CELL;
+    ctx.save();
+    glow(e.type === "car" ? pal.cars[row % pal.cars.length] : pal.truckCab);
     if (e.type === "car") {
       ctx.fillStyle = pal.cars[row % pal.cars.length];
       roundRect(x + 3, y + 8, w - 6, 24, 5);
@@ -461,11 +487,14 @@ export const startFrogger: GameEngine = (
         ctx.fill();
       }
     }
+    ctx.restore();
   };
   const drawLog = (e: Entity, row: number) => {
     const x = e.col * CELL;
     const y = row * CELL;
     const w = e.width * CELL;
+    ctx.save();
+    glow(pal.log);
     ctx.fillStyle = pal.log;
     roundRect(x + 2, y + 6, w - 4, 28, 10);
     ctx.fill();
@@ -477,8 +506,11 @@ export const startFrogger: GameEngine = (
       ctx.lineTo(x + (k * CELL) / 2 + 6, y + 28);
       ctx.stroke();
     }
+    ctx.restore();
   };
   const drawTurtles = (e: Entity, row: number) => {
+    ctx.save();
+    if (!e.submerged) glow(pal.turtleStroke);
     for (let k = 0; k < e.width; k++) {
       const cx = (e.col + k + 0.5) * CELL;
       const cy = row * CELL + CELL / 2;
@@ -502,6 +534,7 @@ export const startFrogger: GameEngine = (
       ctx.lineTo(cx, cy + 8);
       ctx.stroke();
     }
+    ctx.restore();
   };
   // (cx, cy) = centro; mira hacia arriba en coordenadas locales y se rota con `rot`
   const drawFrog = (
@@ -515,6 +548,7 @@ export const startFrogger: GameEngine = (
     ctx.translate(cx, cy);
     ctx.rotate(rot);
     ctx.scale(scale, scale);
+    glow(pal.frog);
     ctx.fillStyle = pal.frog;
     if (jumping) {
       for (const s of [-1, 1]) {
@@ -526,6 +560,12 @@ export const startFrogger: GameEngine = (
     }
     ctx.beginPath();
     ctx.ellipse(0, 0, 14, 12, 0, 0, Math.PI * 2);
+    if (pal.frogOutline) {
+      // trazo de 4 px: 2 px quedan fuera del cuerpo y separan la rana de troncos y tortugas
+      ctx.strokeStyle = pal.frogOutline;
+      ctx.lineWidth = 4;
+      ctx.stroke();
+    }
     ctx.fill();
     for (const s of [-1, 1]) {
       ctx.fillStyle = pal.eye;
