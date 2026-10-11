@@ -1,6 +1,6 @@
 # SPEC 21 — Registro, login y autenticación con Supabase
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 > **Depende de:** SPEC 04 (clientes de Supabase), SPEC 06 (leaderboard y `scores`) y SPEC 01 (pantalla `/auth` y `SessionProvider` actuales)
 > **Fecha:** 2026-10-11
 > **Objetivo:** Reemplazar la sesión simulada en `localStorage` por autenticación real de Supabase (registro con confirmación por correo, login, cierre de sesión y recuperación de contraseña con correo + contraseña), manteniendo el modo invitado.
