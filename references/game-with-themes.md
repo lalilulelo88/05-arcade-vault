@@ -10,6 +10,7 @@ Estados: `—` sin skin · `spec` spec escrita (Borrador/Aprobado), sin código 
 | `caida`      | THETRIS    | —       | —    | —     | —                              |
 | `arkanoid`   | ARKANOID   | ✔       | ✔    | ✔     | `specs/11-skins-arkanoid.md`   |
 | `serpentina` | SERPENTINA | ✔       | ✔    | ✔     | `specs/12-skins-serpentina.md` |
+| `frogger`    | FROGGER    | spec    | spec | spec  | `specs/14-skins-frogger.md`    |
 
 `clasico` es el skin por defecto: conserva los colores originales del motor.
 
