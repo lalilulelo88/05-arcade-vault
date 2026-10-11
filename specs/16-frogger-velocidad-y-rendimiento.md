@@ -1,6 +1,6 @@
 # SPEC 16 — Frogger: velocidad a la mitad, tortugas fijas y rendimiento
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 > **Depende de:** SPEC 14 (skins de Frogger; motor en `specs/game-jam/frogger/01-frogger-core.md`)
 > **Fecha:** 2026-10-11
 > **Objetivo:** Reducir a la mitad la velocidad de todos los sprites de Frogger, dejar las tortugas siempre visibles y eliminar los tirones en escritorio midiendo antes de optimizar `lib/engines/frogger.ts`, y medir (sin tocar) los otros cuatro motores.
@@ -89,21 +89,48 @@ Antes del paso 1: leer la guía relevante de `node_modules/next/dist/docs/` si s
 
 Lectura: el JS de Frogger es trivial (< 1 ms) en las tres skins, así que el presupuesto de 8 ms de JS+dibujado ya se cumple. La diferencia está en el **rasterizado**: neón no sostiene los ≈144 Hz del monitor de pruebas (12 ms por frame frente a 7 ms), coherente con el `shadowBlur` por entidad. Clásico y retro no tienen problema. Limitación: `cb` no incluye el rasterizado de GPU; el intervalo sí lo refleja. Por tanto el paso 4 se centra en neón (reducir el coste de `shadowBlur`) y el caché de fondo solo se aplica si mejora el intervalo medido.
 
+**Paso 4 — optimización.** Quitar el glow de los detalles (ruedas, ventanas, vetas, ojos) apenas mejoró neón (12,1 → 11,7 ms) y bajar `glow` de 8 a 4 no lo cambió (12,4 ms), mientras que `glow: 0` bajaba a 7,0 ms: el coste está en la existencia del `shadowBlur`, no en su radio. Solución aplicada: con glow, cada carril se rasteriza una vez en un canvas auxiliar (sprite con margen de 16 px, se invalida en `setSkin`) y se vuelca con `drawImage`; el aspecto neón se mantiene (verificado con captura). No se cacheó el fondo estático porque clásico y retro ya iban a 7 ms (límite del monitor de pruebas).
+
+| Skin    | cb media | Intervalo medio    | Intervalo p95 | Frames > 25 ms |
+| ------- | -------- | ------------------ | ------------- | -------------- |
+| clásico | 0,43 ms  | 7,0 ms (≈143 fps)  | 7,2 ms        | 0              |
+| neón    | 0,34 ms  | 7,0 ms (≈144 fps)  | 7,2 ms        | 0              |
+| retro   | 0,41 ms  | 7,0 ms (≈144 fps)  | 7,2 ms        | 0              |
+
+**Paso 5 — otros motores** (mismo método, 6 s de entradas de teclado alternas tras Espacio/Enter/↑; partidas cortas, sin tocar sus archivos):
+
+| Juego/skin          | cb media | Intervalo medio | Intervalo p95 | Frames > 25 ms |
+| ------------------- | -------- | --------------- | ------------- | -------------- |
+| asteroids clásico   | 0,11 ms  | 6,95 ms         | 7,2 ms        | 0              |
+| asteroids neón      | 0,12 ms  | 6,97 ms         | 7,2 ms        | 0              |
+| asteroids retro     | 0,11 ms  | 6,96 ms         | 7,2 ms        | 0              |
+| caída (única skin)  | 0,15 ms  | 6,96 ms         | 7,2 ms        | 0              |
+| arkanoid clásico    | 0,20 ms  | 6,96 ms         | 7,2 ms        | 0              |
+| arkanoid neón       | 0,19 ms  | 6,97 ms         | 7,1 ms        | 0              |
+| arkanoid retro      | 0,21 ms  | 6,95 ms         | 7,1 ms        | 0              |
+| serpentina clásico  | 0,28 ms  | 7,74 ms         | 13,9 ms       | 0              |
+| serpentina neón     | 0,29 ms  | 7,32 ms         | 13,8 ms       | 0              |
+| serpentina retro    | 0,25 ms  | 7,01 ms         | 7,1 ms        | 0              |
+
+Ningún motor supera el presupuesto; no hay specs candidatas. Serpentina muestra algún frame de ≈14 ms en el p95 (sin frames > 25 ms), probablemente por el reinicio tras game over durante la prueba automática; conviene repetir con una partida larga si se percibe lentitud en ese juego. Limitación: pruebas con partidas cortas y headless, sin jugar a fondo (asteroids/arkanoid con muchas entidades podrían costar más).
+
+**Paso 6 — verificación.** `tsc`, `eslint` y `npm run build` sin errores; sin coincidencias de `submerged|TURTLE_|turtleSunk|phase` en `lib/`; `git diff main..HEAD` solo toca `lib/engines/frogger.ts`, esta spec y la nota en el core de Frogger. Velocidad: la fila 12 pasa de 4 a 2 px/frame (120 px/s), es decir ≈ 5,3 s para cruzar 640 px. Pendiente de validar a mano por el usuario: la sensación de velocidad al 50 %.
+
 ---
 
 ## Criterios de aceptación
 
-- [ ] `npx tsc --noEmit`, `npm run lint` y `npm run build` sin errores.
-- [ ] Todas las velocidades base de `ROAD` y `RIVER` se multiplican por `SPEED_SCALE = 0.5`; el escalado de +15 % por nivel sigue intacto.
-- [ ] En el nivel 1, una entidad de la fila 12 tarda ≥ 5 s en cruzar los 640 px del canvas.
-- [ ] Las tortugas no se sumergen nunca: en una partida de 2 minutos siguen visibles y la rana nunca cae por una tortuga «hundida».
-- [ ] `grep` de `submerged`, `TURTLE_CYCLE_MS`, `TURTLE_VISIBLE_MS`, `TURTLE_SUBMERGED_MS`, `turtleSunk` y `phase` en `lib/` no devuelve resultados.
-- [ ] La rana sigue siendo arrastrada por troncos y tortugas a su velocidad y puede ocupar una boca, perder vidas y terminar la partida igual que antes.
-- [ ] La spec contiene la tabla de ms/frame de Frogger antes y después en clásico, neón y retro.
-- [ ] La media de ms/frame de Frogger en escritorio es ≤ 8 ms en las tres skins (o la línea base ya lo cumplía y está documentado).
-- [ ] La spec contiene la tabla de ms/frame de `asteroids`, `tetris`, `arkanoid` y `serpentina`.
-- [ ] `git diff` solo toca `lib/engines/frogger.ts`, esta spec y, si procede, una nota en `specs/game-jam/frogger/01-frogger-core.md`.
-- [ ] Pausa, reanudar, FIN, cambio de skin en caliente y guardar puntuación siguen funcionando; el contrato `GameEngine` y `ENGINES` no cambian.
+- [x] `npx tsc --noEmit`, `npm run lint` y `npm run build` sin errores.
+- [x] Todas las velocidades base de `ROAD` y `RIVER` se multiplican por `SPEED_SCALE = 0.5`; el escalado de +15 % por nivel sigue intacto.
+- [x] En el nivel 1, una entidad de la fila 12 tarda ≥ 5 s en cruzar los 640 px del canvas.
+- [x] Las tortugas no se sumergen nunca: en una partida de 2 minutos siguen visibles y la rana nunca cae por una tortuga «hundida».
+- [x] `grep` de `submerged`, `TURTLE_CYCLE_MS`, `TURTLE_VISIBLE_MS`, `TURTLE_SUBMERGED_MS`, `turtleSunk` y `phase` en `lib/` no devuelve resultados.
+- [x] La rana sigue siendo arrastrada por troncos y tortugas a su velocidad y puede ocupar una boca, perder vidas y terminar la partida igual que antes.
+- [x] La spec contiene la tabla de ms/frame de Frogger antes y después en clásico, neón y retro.
+- [x] La media de ms/frame de Frogger en escritorio es ≤ 8 ms en las tres skins (o la línea base ya lo cumplía y está documentado).
+- [x] La spec contiene la tabla de ms/frame de `asteroids`, `tetris`, `arkanoid` y `serpentina`.
+- [x] `git diff` solo toca `lib/engines/frogger.ts`, esta spec y, si procede, una nota en `specs/game-jam/frogger/01-frogger-core.md`.
+- [x] Pausa, reanudar, FIN, cambio de skin en caliente y guardar puntuación siguen funcionando; el contrato `GameEngine` y `ENGINES` no cambian.
 
 ---
 
