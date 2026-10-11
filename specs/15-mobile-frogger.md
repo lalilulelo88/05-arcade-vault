@@ -1,6 +1,6 @@
 # SPEC 15 — Frogger en móvil (botonera táctil, pantalla y HUD)
 
-> **Estado:** Aprobado
+> **Estado:** Implementado
 > **Depende de:** SPEC 13 (controles táctiles móviles) y SPEC 14 (skins de Frogger; motor en `specs/game-jam/frogger/01-frogger-core.md`)
 > **Fecha:** 2026-10-10
 > **Objetivo:** Hacer Frogger jugable en un móvil con `(pointer: coarse)`: cruceta en pantalla que emite las flechas, pantalla a la proporción 640×560 (8:7) y HUD compacto, sin tocar el motor.
@@ -95,6 +95,12 @@ Antes del paso 1: leer en `node_modules/next/dist/docs/` la guía de Client Comp
 3. **Prueba funcional en emulación.** Cada botón hace saltar a la rana en su dirección; la primera pulsación inicia la partida; en pausa y en "FIN DEL JUEGO" los botones no hacen nada; el selector de skin sigue funcionando; en escritorio (`pointer: fine`) no hay botonera ni cambios. Multitoque: tocar dos botones seguidos rápido no deja teclas pegadas (los botones emiten `keyup` al soltar).
 4. **Prueba en dispositivo real.** `http://<ip-local>:3000/jugar/frogger`: jugar una partida completa, comprobar sin doble toque con zoom ni menú contextual, tamaño cómodo de los botones y que la pantalla se lee con las tres skins. Ajustar `--pad-h`/tamaños si hace falta.
 5. **Verificación final.** `npx tsc --noEmit`, `npm run lint`, `npm run build`; `git diff` solo toca `components/touch-controls.tsx`, `app/globals.css` y esta spec; marcar la spec como Implementado.
+
+### Resultado de la implementación
+
+- `--pad-h: 122px` medido en emulación táctil a 375×640: botonera de 108 px + 14 px de margen = 122 px exactos; pantalla 238×208 (8:7), sin scroll horizontal. El scroll vertical que queda viene del pie de página y es igual que en Caída y Serpentina; la botonera termina en y=605 dentro de los 640 px visibles.
+- Los cuatro botones miden 52×52 px; la primera pulsación inicia la partida; en pausa no hacen nada.
+- **Pendiente:** el paso 4 (prueba en dispositivo real) no se pudo hacer desde el entorno de desarrollo. Queda por validar la legibilidad de la pantalla de ≈ 238 px y los toques accidentales; si falla, aplicar la alternativa de fila de 4 botones.
 
 ---
 
