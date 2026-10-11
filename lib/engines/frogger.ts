@@ -17,8 +17,6 @@ type Entity = {
   col: number; // en celdas
   width: number; // en celdas
   type: "car" | "truck" | "log" | "turtle";
-  submerged?: boolean;
-  phase?: number; // ms de desfase del ciclo de inmersión (solo tortugas)
 };
 type Lane = {
   row: number;
@@ -34,9 +32,6 @@ type Frog = {
   targetCol: number;
   targetRow: number;
 };
-const TURTLE_VISIBLE_MS = 3000;
-const TURTLE_SUBMERGED_MS = 1500;
-export const TURTLE_CYCLE_MS = TURTLE_VISIBLE_MS + TURTLE_SUBMERGED_MS;
 type LaneDef = {
   row: number;
   dir: 1 | -1;
@@ -72,10 +67,6 @@ export function buildLanes(level: number): Lane[] {
       col: offset + i * step,
       width: d.width,
       type: d.type,
-      ...(d.type === "turtle" && {
-        submerged: false,
-        phase: i * (TURTLE_CYCLE_MS / count),
-      }),
     }));
     return { row: d.row, speed: d.speed * factor, dir: d.dir, entities };
   });
@@ -131,11 +122,11 @@ function checkRoadCollision(frog: Frog, lanes: Lane[]) {
       l.entities.some((e) => covers(frog, e)),
   );
 }
-// Entidad que sostiene a la rana en el río (null si cae al agua o la tortuga está sumergida)
+// Entidad que sostiene a la rana en el río (null si cae al agua)
 function getSupport(frog: Frog, lanes: Lane[]) {
   for (const lane of lanes) {
     if (!inRiver(lane.row) || lane.row !== frog.row) continue;
-    const entity = lane.entities.find((e) => covers(frog, e) && !e.submerged);
+    const entity = lane.entities.find((e) => covers(frog, e));
     if (entity) return { lane, entity };
   }
   return null;
@@ -165,7 +156,6 @@ type Palette = {
   logGrain: string;
   turtle: string;
   turtleStroke: string;
-  turtleSunk: string;
   frog: string;
   frogOutline: string | null; // neon/retro: contorno de 2 px
   eye: string;
@@ -194,7 +184,6 @@ const PALETTES: Record<SkinId, Palette> = {
     logGrain: "#4e2d10",
     turtle: "#2f9e44",
     turtleStroke: "#1b6b2c",
-    turtleSunk: "rgba(120,220,140,0.35)",
     frog: "#4ade80",
     frogOutline: null,
     eye: "#fff",
@@ -222,7 +211,6 @@ const PALETTES: Record<SkinId, Palette> = {
     logGrain: "#4a2e0c",
     turtle: "#087a85",
     turtleStroke: "#00f5ff",
-    turtleSunk: "rgba(8,122,133,0.35)",
     frog: "#00ff88",
     frogOutline: "#05050a",
     eye: "#fff",
@@ -250,7 +238,6 @@ const PALETTES: Record<SkinId, Palette> = {
     logGrain: "#6b4200",
     turtle: "#1f9a40",
     turtleStroke: "#061406",
-    turtleSunk: "rgba(31,154,64,0.35)",
     frog: "#33ff66",
     frogOutline: "#061406",
     eye: "#d8ffd8",
@@ -276,7 +263,6 @@ export const startFrogger: GameEngine = (
   let level = 1;
   let lanes = buildLanes(level);
   let timeLeft = roundTime(level);
-  let clock = 0; // ms jugados, para el ciclo de las tortugas
   let facing: Direction = "up";
   let pending: Direction | null = null;
   const goals: boolean[] = Array(MOUTHS).fill(false);
@@ -352,16 +338,12 @@ export const startFrogger: GameEngine = (
     frog.targetRow = r;
   };
   const update = (dt: number) => {
-    clock += dt;
     for (const lane of lanes)
       for (const e of lane.entities) {
         // speed está en px/frame (60 fps); col y width en celdas
         e.col += (lane.speed * lane.dir * dt) / 16 / CELL;
         if (lane.dir > 0 && e.col >= COLS) e.col = -e.width;
         if (lane.dir < 0 && e.col + e.width <= 0) e.col = COLS;
-        if (e.type === "turtle")
-          e.submerged =
-            (clock + (e.phase ?? 0)) % TURTLE_CYCLE_MS >= TURTLE_VISIBLE_MS;
       }
     if (state !== "playing") return;
     if (!frog.animating && pending) startJump(pending);
@@ -525,19 +507,13 @@ export const startFrogger: GameEngine = (
   };
   const drawTurtles = (e: Entity, row: number) => {
     ctx.save();
-    if (!e.submerged) glow(pal.turtleStroke);
+    glow(pal.turtleStroke);
     for (let k = 0; k < e.width; k++) {
       const cx = px((e.col + k + 0.5) * CELL);
       const cy = row * CELL + CELL / 2;
       ctx.beginPath();
       if (pal.square) ctx.rect(cx - 14, cy - 14, 28, 28);
       else ctx.arc(cx, cy, 15, 0, Math.PI * 2);
-      if (e.submerged) {
-        ctx.strokeStyle = pal.turtleSunk;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        continue;
-      }
       ctx.fillStyle = pal.turtle;
       ctx.fill();
       ctx.strokeStyle = pal.turtleStroke;
