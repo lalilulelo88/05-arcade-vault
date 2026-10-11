@@ -4,6 +4,8 @@
 > **Depende de:** SPEC 05, SPEC 06, SPEC 07
 > **Fecha:** 2026-05-20
 > **Objetivo:** Integrar Frogger (canvas puro, construido desde cero) como juego jugable en Arcade Vault con ID `frogger`, conectando score, vidas, nivel y game over con el HUD React y la play-page dedicada.
+>
+> **Nota (SPEC 16):** las tortugas ya no se sumergen (siempre son apoyo) y todas las velocidades se multiplican por 0,5. Las menciones al ciclo de inmersión y a las velocidades de abajo son históricas.
 
 ---
 

@@ -17,8 +17,6 @@ type Entity = {
   col: number; // en celdas
   width: number; // en celdas
   type: "car" | "truck" | "log" | "turtle";
-  submerged?: boolean;
-  phase?: number; // ms de desfase del ciclo de inmersión (solo tortugas)
 };
 type Lane = {
   row: number;
@@ -34,9 +32,6 @@ type Frog = {
   targetCol: number;
   targetRow: number;
 };
-const TURTLE_VISIBLE_MS = 3000;
-const TURTLE_SUBMERGED_MS = 1500;
-export const TURTLE_CYCLE_MS = TURTLE_VISIBLE_MS + TURTLE_SUBMERGED_MS;
 type LaneDef = {
   row: number;
   dir: 1 | -1;
@@ -60,9 +55,10 @@ const RIVER: LaneDef[] = [
   { row: 5, dir: -1, speed: 2, type: "turtle", width: 2, gap: 3 },
   { row: 6, dir: 1, speed: 3, type: "log", width: 3, gap: 4 },
 ];
+const SPEED_SCALE = 0.5; // multiplicador global sobre las velocidades base
 // Cada nivel sube todas las velocidades un 15 % (acumulativo).
 export function buildLanes(level: number): Lane[] {
-  const factor = 1.15 ** (level - 1);
+  const factor = 1.15 ** (level - 1) * SPEED_SCALE;
   return [...ROAD, ...RIVER].map((d) => {
     const step = d.width + d.gap;
     const count = Math.max(2, Math.ceil(COLS / step));
@@ -71,10 +67,6 @@ export function buildLanes(level: number): Lane[] {
       col: offset + i * step,
       width: d.width,
       type: d.type,
-      ...(d.type === "turtle" && {
-        submerged: false,
-        phase: i * (TURTLE_CYCLE_MS / count),
-      }),
     }));
     return { row: d.row, speed: d.speed * factor, dir: d.dir, entities };
   });
@@ -130,11 +122,11 @@ function checkRoadCollision(frog: Frog, lanes: Lane[]) {
       l.entities.some((e) => covers(frog, e)),
   );
 }
-// Entidad que sostiene a la rana en el río (null si cae al agua o la tortuga está sumergida)
+// Entidad que sostiene a la rana en el río (null si cae al agua)
 function getSupport(frog: Frog, lanes: Lane[]) {
   for (const lane of lanes) {
     if (!inRiver(lane.row) || lane.row !== frog.row) continue;
-    const entity = lane.entities.find((e) => covers(frog, e) && !e.submerged);
+    const entity = lane.entities.find((e) => covers(frog, e));
     if (entity) return { lane, entity };
   }
   return null;
@@ -164,7 +156,6 @@ type Palette = {
   logGrain: string;
   turtle: string;
   turtleStroke: string;
-  turtleSunk: string;
   frog: string;
   frogOutline: string | null; // neon/retro: contorno de 2 px
   eye: string;
@@ -193,7 +184,6 @@ const PALETTES: Record<SkinId, Palette> = {
     logGrain: "#4e2d10",
     turtle: "#2f9e44",
     turtleStroke: "#1b6b2c",
-    turtleSunk: "rgba(120,220,140,0.35)",
     frog: "#4ade80",
     frogOutline: null,
     eye: "#fff",
@@ -221,7 +211,6 @@ const PALETTES: Record<SkinId, Palette> = {
     logGrain: "#4a2e0c",
     turtle: "#087a85",
     turtleStroke: "#00f5ff",
-    turtleSunk: "rgba(8,122,133,0.35)",
     frog: "#00ff88",
     frogOutline: "#05050a",
     eye: "#fff",
@@ -249,7 +238,6 @@ const PALETTES: Record<SkinId, Palette> = {
     logGrain: "#6b4200",
     turtle: "#1f9a40",
     turtleStroke: "#061406",
-    turtleSunk: "rgba(31,154,64,0.35)",
     frog: "#33ff66",
     frogOutline: "#061406",
     eye: "#d8ffd8",
@@ -265,7 +253,7 @@ export const startFrogger: GameEngine = (
   events: EngineEvents,
   skin: SkinId = "clasico",
 ): EngineHandle => {
-  const ctx = canvas.getContext("2d")!;
+  let ctx = canvas.getContext("2d")!; // se intercambia un instante al generar sprites
   let pal = PALETTES[skin];
   // ── Estado ──────────────────────────────────────────────────────────────────
   let state = "ready" as State;
@@ -275,7 +263,6 @@ export const startFrogger: GameEngine = (
   let level = 1;
   let lanes = buildLanes(level);
   let timeLeft = roundTime(level);
-  let clock = 0; // ms jugados, para el ciclo de las tortugas
   let facing: Direction = "up";
   let pending: Direction | null = null;
   const goals: boolean[] = Array(MOUTHS).fill(false);
@@ -351,16 +338,12 @@ export const startFrogger: GameEngine = (
     frog.targetRow = r;
   };
   const update = (dt: number) => {
-    clock += dt;
     for (const lane of lanes)
       for (const e of lane.entities) {
         // speed está en px/frame (60 fps); col y width en celdas
         e.col += (lane.speed * lane.dir * dt) / 16 / CELL;
         if (lane.dir > 0 && e.col >= COLS) e.col = -e.width;
         if (lane.dir < 0 && e.col + e.width <= 0) e.col = COLS;
-        if (e.type === "turtle")
-          e.submerged =
-            (clock + (e.phase ?? 0)) % TURTLE_CYCLE_MS >= TURTLE_VISIBLE_MS;
       }
     if (state !== "playing") return;
     if (!frog.animating && pending) startJump(pending);
@@ -412,6 +395,10 @@ export const startFrogger: GameEngine = (
     if (pal.glow <= 0) return;
     ctx.shadowColor = color;
     ctx.shadowBlur = pal.glow;
+  };
+  // El glow solo va en el cuerpo: los detalles (ruedas, vetas, ojos) no lo necesitan y cada shadowBlur cuesta rasterizado
+  const noGlow = () => {
+    if (pal.glow > 0) ctx.shadowBlur = 0;
   };
   const drawBackground = () => {
     const zone = (r0: number, r1: number, color: string) => {
@@ -475,6 +462,7 @@ export const startFrogger: GameEngine = (
       ctx.fillStyle = pal.cars[row % pal.cars.length];
       roundRect(x + 3, y + 8, w - 6, 24, 5);
       ctx.fill();
+      noGlow();
       ctx.fillStyle = pal.window;
       ctx.fillRect(x + (dir > 0 ? w - 17 : 8), y + 12, 9, 16);
     } else {
@@ -487,6 +475,7 @@ export const startFrogger: GameEngine = (
       ctx.fillStyle = pal.truckCab;
       roundRect(cabX, y + 8, cab, 24, 4);
       ctx.fill();
+      noGlow();
     }
     ctx.fillStyle = pal.wheel;
     const wheels = e.type === "car" ? [0.28, 0.72] : [0.15, 0.4, 0.85];
@@ -512,6 +501,7 @@ export const startFrogger: GameEngine = (
     ctx.fillStyle = pal.log;
     roundRect(x + 2, y + 6, w - 4, 28, 10);
     ctx.fill();
+    noGlow();
     ctx.strokeStyle = pal.logGrain;
     ctx.lineWidth = 2;
     for (let k = 1; k < e.width * 2; k++) {
@@ -524,24 +514,20 @@ export const startFrogger: GameEngine = (
   };
   const drawTurtles = (e: Entity, row: number) => {
     ctx.save();
-    if (!e.submerged) glow(pal.turtleStroke);
+    glow(pal.turtleStroke);
     for (let k = 0; k < e.width; k++) {
+      glow(pal.turtleStroke);
       const cx = px((e.col + k + 0.5) * CELL);
       const cy = row * CELL + CELL / 2;
       ctx.beginPath();
       if (pal.square) ctx.rect(cx - 14, cy - 14, 28, 28);
       else ctx.arc(cx, cy, 15, 0, Math.PI * 2);
-      if (e.submerged) {
-        ctx.strokeStyle = pal.turtleSunk;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        continue;
-      }
       ctx.fillStyle = pal.turtle;
       ctx.fill();
       ctx.strokeStyle = pal.turtleStroke;
       ctx.lineWidth = 2;
       ctx.stroke();
+      noGlow();
       ctx.beginPath();
       ctx.moveTo(cx - 8, cy);
       ctx.lineTo(cx + 8, cy);
@@ -583,6 +569,7 @@ export const startFrogger: GameEngine = (
       ctx.stroke();
     }
     ctx.fill();
+    noGlow();
     for (const s of [-1, 1]) {
       ctx.fillStyle = pal.eye;
       if (pal.square) {
@@ -600,6 +587,30 @@ export const startFrogger: GameEngine = (
       ctx.fill();
     }
     ctx.restore();
+  };
+  const drawEntity = (e: Entity, lane: Lane) => {
+    if (e.type === "log") drawLog(e, lane.row);
+    else if (e.type === "turtle") drawTurtles(e, lane.row);
+    else drawVehicle(e, lane.row, lane.dir);
+  };
+  // Con glow, el shadowBlur por entidad y frame es lo que más cuesta (≈5 ms medidos en neón):
+  // se rasteriza una vez por carril (todas sus entidades son iguales) y se vuelca con drawImage
+  const SPRITE_PAD = 16;
+  const sprites = new Map<number, HTMLCanvasElement>();
+  const laneSprite = (lane: Lane) => {
+    let sp = sprites.get(lane.row);
+    if (sp) return sp;
+    const e0 = lane.entities[0];
+    sp = document.createElement("canvas");
+    sp.width = e0.width * CELL + 2 * SPRITE_PAD;
+    sp.height = CELL + 2 * SPRITE_PAD;
+    const main = ctx;
+    ctx = sp.getContext("2d")!;
+    ctx.translate(SPRITE_PAD, SPRITE_PAD - lane.row * CELL);
+    drawEntity({ ...e0, col: 0 }, lane);
+    ctx = main;
+    sprites.set(lane.row, sp);
+    return sp;
   };
   const drawHud = () => {
     ctx.font = "bold 13px monospace";
@@ -627,9 +638,13 @@ export const startFrogger: GameEngine = (
     drawBackground();
     for (const lane of lanes)
       for (const e of lane.entities) {
-        if (e.type === "log") drawLog(e, lane.row);
-        else if (e.type === "turtle") drawTurtles(e, lane.row);
-        else drawVehicle(e, lane.row, lane.dir);
+        if (pal.glow > 0)
+          ctx.drawImage(
+            laneSprite(lane),
+            e.col * CELL - SPRITE_PAD,
+            lane.row * CELL - SPRITE_PAD,
+          );
+        else drawEntity(e, lane);
       }
     drawHud();
     const t = frog.animating ? Math.min(frog.animT / JUMP_MS, 1) : 0;
@@ -701,6 +716,7 @@ export const startFrogger: GameEngine = (
   return {
     setSkin: (s: SkinId) => {
       pal = PALETTES[s];
+      sprites.clear();
     },
     pause: stop,
     resume: start,
